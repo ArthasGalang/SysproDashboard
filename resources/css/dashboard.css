@@ -21,6 +21,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: 2rem;
+    justify-content: center;
 }
 
 .dashboard-card {
@@ -36,9 +37,18 @@
 }
 
 .dashboard-card-red {
-    background: #fff5f5;
+    background: #ffffff;
     color: #e3342f;
-    border: 1px solid #f8d7da;
+    box-shadow: 0 2px 8px rgba(227,52,47,0.07);
+}
+.dashboard-card-blue {
+    background: #ffffff;
+    color: #6495ff;
+    box-shadow: 0 2px 8px rgba(227,52,47,0.07);
+}
+.dashboard-card-green {
+    background: #ffffff;
+    color: #43f03d;
     box-shadow: 0 2px 8px rgba(227,52,47,0.07);
 }
 
@@ -55,6 +65,12 @@
 
 .dashboard-card-red .dashboard-card-value {
     color: #e3342f;
+}
+.dashboard-card-blue .dashboard-card-value {
+    color: #6495ff;
+}
+.dashboard-card-green .dashboard-card-value {
+    color: #3dc539;
 }
 
 .dashboard-card-label {
@@ -85,6 +101,19 @@
     align-items: stretch;
 }
 
+.dashboard-panel-sidegraph {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
+    flex: 1 1 350px;
+    min-width: 900px;
+    display: flex;
+    margin-bottom: 100px;
+    flex-direction: column;
+    align-items: stretch;
+}
+
 .dashboard-panel-title {
     font-weight: 600;
     color: #222;
@@ -93,20 +122,21 @@
 }
 
 .dashboard-bar-chart {
-    width: 100%;
-    height: 180px;
+    width: 90%;
+    height: 400px; /* smaller height */
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.dashboard-donut-chart {
+.dashboard-doughnut-chart {
+    width: 520px;   /* adjust as needed */
+    height: 520px;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
+    margin: 0 auto; /* centers inside panel */
 }
-
 .dashboard-donut-legend {
     display: flex;
     gap: 1.2rem;

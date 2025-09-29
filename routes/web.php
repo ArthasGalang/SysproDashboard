@@ -20,13 +20,22 @@ Route::get('/api/value-by-class', function () {
 Route::get('/api/stocks', [InvenValDBController::class, 'index']);
 
 
+Route::get('/api/value-by-warehouse', function () {
+    $data = DB::select("
+        SELECT Warehouse, SUM(QtyOnHand * UnitCost) as TotalValue
+        FROM vw_InvenValDB
+        GROUP BY Warehouse
+    ");
+    return response()->json($data);
+});
+
 Route::get('/api/stats', function () {
     $data = DB::selectOne("
-        SELECT 
+        SELECT
             MAX(GrandTotalValue) AS TotalInventoryValue,
             SUM(QtyOnHand) AS TotalQuantityOnHand,
             COUNT(DISTINCT StockCode) AS UniqueStockCodes,
-            SUM(CASE WHEN QtyOnHand < 10 THEN (QtyOnHand * UnitCost) ELSE 0 END) AS SlowMovingStockValue
+            MAX(SlowMovingStockTotal) AS SlowMovingStockValue
         FROM vw_InvenValDB
     ");
 
@@ -34,8 +43,27 @@ Route::get('/api/stats', function () {
 });
 
 Route::get('/', function () {
-    return Inertia::render('Dashboard');
-})->name('Dashboard');
+    return Inertia::render('InvenValDB');
+})->name('InvenValDB');
+
+Route::get('/InvenValDB', function () {
+    return Inertia::render('InvenValDB');
+})->name('InvenValDB');
+
+Route::get('/ARDB', function () {
+    return Inertia::render('ARDB');
+})->name('ARDB');
+
+Route::get('/PurchasingDB', function () {
+    return Inertia::render('PurchasingDB');
+})->name('PurchasingDB');
+
+Route::get('/SalesDB', function () {
+    return Inertia::render('SalesDB');
+})->name('SalesDB');
+
+
+
 
 
 // Route::get('/api/stocks', function () {

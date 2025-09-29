@@ -1,31 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import '../../css/dashboard.css';
-import { PieChart, Pie, Cell, Legend, Tooltip } from "recharts";
+import '@css/dashboard.css';
+import ValByProductClass from './Charts/InvenVal/ValByProductClass';
+import ValByWarehouse from './Charts/InvenVal/ValByWarehouse'
+
 
 const COLORS = ["#38c172", "#f6ad55", "#e3342f", "#6cb2eb"];
 
-const Dashboard = () => {
+const InvenValDB = () => {
     const [stocks, setStocks] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [chartData, setChartData] = useState([]); 
-    const [stats, setStats] = useState([]); // now dynamic
+    const [stats, setStats] = useState([]); 
 
-    // ProductClass distribution
-    useEffect(() => {
-        fetch("http://127.0.0.1:8000/api/value-by-class")
-            .then((res) => res.json())
-            .then((data) => {
-                const formatted = data.map((d) => ({
-                    name: d.ProductClass,
-                    value: Number(d.TotalValue), // 👈 use total value instead of count
-                }));
-                setChartData(formatted);
-            })
-            .catch((err) => console.error("Error:", err));
-    }, []);
-
-
-    // Stats (cards)
     useEffect(() => {
         fetch("http://127.0.0.1:8000/api/stats")
             .then((res) => res.json())
@@ -40,12 +25,14 @@ const Dashboard = () => {
             .catch((err) => console.error("Error fetching stats:", err));
     }, []);
 
-    // Stock table
     useEffect(() => {
         fetch("http://127.0.0.1:8000/api/stocks")
             .then((response) => response.json())
             .then((data) => {
-                setStocks(data);
+                const sortedStocks = data
+                    .sort((a, b) => (Number(b.TotalValue) || 0) - (Number(a.TotalValue) || 0))
+                    .slice(0, 10);
+                setStocks(sortedStocks);
                 setLoading(false);
             })
             .catch((error) => {
@@ -79,71 +66,23 @@ const Dashboard = () => {
                 <div className="dashboard-panel">
                     <div className="dashboard-panel-title">Value by Warehouse</div>
                     <div className="dashboard-bar-chart">
-                        <svg width="100%" height="180">
-                            <rect x="30" y="40" width="50" height="120" fill="#6cb2eb" />
-                            <rect x="100" y="20" width="50" height="140" fill="#6cb2eb" />
-                            <rect x="170" y="100" width="50" height="60" fill="#6cb2eb" />
-                            <rect x="240" y="150" width="50" height="10" fill="#6cb2eb" />
-                            <text x="45" y="175" fontSize="12">FG</text>
-                            <text x="115" y="175" fontSize="12">RAW</text>
-                            <text x="185" y="175" fontSize="12">WIP</text>
-                            <text x="255" y="175" fontSize="12">OBS</text>
-                        </svg>
+                        <ValByWarehouse />
                     </div>
                 </div>
 
                 <div className="dashboard-panel">
                 <div className="dashboard-panel-title">Value by Product Class</div>
-
-                <div style={{ display: "flex", alignItems: "flex-start" }}>
-                    {/* Pie chart on the left */}
-                    <PieChart width={250} height={250}>
-                    <Pie
-                        data={chartData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={90}  // smaller outer radius
-                        innerRadius={50}  // smaller inner radius
-                        label={false}     // remove labels
-                    >
-                        {chartData.map((entry, index) => (
-                        <Cell
-                            key={`cell-${index}`}
-                            fill={`hsl(${(index * 360) / chartData.length}, 70%, 50%)`} // unique color
-                        />
-                        ))}
-                    </Pie>
-                    <Tooltip formatter={(val) => `$${Number(val).toLocaleString()}`} />
-                    </PieChart>
-
-                    {/* Glossary (legend) on the right, 2 columns */}
-                    <div style={{ marginLeft: "20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
-                    {chartData.map((entry, index) => (
-                        <div key={index} style={{ display: "flex", alignItems: "center" }}>
-                        <div
-                            style={{
-                            width: "14px",
-                            height: "14px",
-                            backgroundColor: `hsl(${(index * 360) / chartData.length}, 70%, 50%)`,
-                            marginRight: "8px",
-                            borderRadius: "3px",
-                            }}
-                        ></div>
-                        <span style={{ fontSize: "14px" }}>
-                            {entry.name}: <strong>${Number(entry.value).toLocaleString()}</strong>
-                        </span>
-                        </div>
-                    ))}
+                    <div className="dashboard-doughnut-chart"> 
+                        <ValByProductClass />
                     </div>
-                </div>
                 </div>
 
             </div>
+
+
             {/* Table */}
             <div className="dashboard-table-panel">
-                <div className="dashboard-panel-title">All Inventory Items</div>
+                <div className="dashboard-panel-title">Top 10 Inventory Items by Value</div>
                 <table className="dashboard-table">
                     <thead>
                         <tr>
@@ -181,4 +120,4 @@ const Dashboard = () => {
     );
 };
 
-export default Dashboard;
+export default InvenValDB;
