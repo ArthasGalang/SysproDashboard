@@ -65,11 +65,3 @@ Route::get('/SalesDB', function () {
 
 
 
-
-// Route::get('/api/stocks', function () {
-//     $data = DB::select('SELECT * FROM dbo.vw_InvenValDB'); // 👈 add schema
-//     return response()->json($data);
-// });
-
-
-
