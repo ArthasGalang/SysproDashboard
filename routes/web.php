@@ -16,10 +16,6 @@ Route::get('/api/value-by-class', function () {
     return response()->json($data);
 });
 
-
-Route::get('/api/stocks', [InvenValDBController::class, 'index']);
-
-
 Route::get('/api/value-by-warehouse', function () {
     $data = DB::select("
         SELECT Warehouse, SUM(QtyOnHand * UnitCost) as TotalValue
@@ -41,6 +37,23 @@ Route::get('/api/stats', function () {
 
     return response()->json($data);
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Route::get('/api/stocks', [InvenValDBController::class, 'index']);
+
 
 Route::get('/', function () {
     return Inertia::render('InvenValDB');

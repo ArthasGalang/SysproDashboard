@@ -48,17 +48,37 @@ const InvenValDB = () => {
                 Live snapshot of inventory value and key metrics.
             </div>
 
+            {/*Filter card*/}
+            <div className="dashboard-table-panel-top" style={{ marginBottom: '40px' }}>
+                <div>
+                    <div className="dashboard-panel-title-filter">Filters</div>        
+                    <div className="dashboardFilterClose">
+                        <button>Hide</button>
+                    </div>
+
+                </div>
+            </div>
+
+
             {/* Dashboard cards */}
             <div className="dashboard-cards">
-                {stats.map((stat) => (
-                    <div
-                        key={stat.label}
-                        className={`dashboard-card${stat.highlight ? ' dashboard-card-red' : ''}`}
-                    >
-                        <span className="dashboard-card-label">{stat.label}</span>
-                        <span className="dashboard-card-value">{stat.value}</span>
-                    </div>
-                ))}
+                {[
+                    { label: 'Total Inventory Value', highlight: false },
+                    { label: 'Total Quantity on Hand', highlight: false },
+                    { label: 'Unique Stock Codes', highlight: false },
+                    { label: 'Slow-Moving Stock Value', highlight: true },
+                ].map((card, idx) => {
+                    const stat = stats.find(s => s.label === card.label);
+                    return (
+                        <div
+                            key={card.label}
+                            className={`dashboard-card${card.highlight ? ' dashboard-card-red' : ''}`}
+                        >
+                            <span className="dashboard-card-label">{card.label}</span>
+                            <span className="dashboard-card-value">{stat ? stat.value : 'Loading...'}</span>
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Row with charts */}
