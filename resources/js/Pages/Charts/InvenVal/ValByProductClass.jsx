@@ -6,11 +6,16 @@ import "@css/dashboard.css";
 
 const COLORS = ["#38c172", "#f6ad55", "#e3342f", "#6cb2eb"];
 
-const ValByProductClass = () => {
+const ValByProductClass = ({ warehouses = [], productClasses = [] }) => {
   const [classData, setClassData] = useState([]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/value-by-class")
+    const params = new URLSearchParams();
+    if (warehouses && warehouses.length) params.set('warehouses', warehouses.join(','));
+    if (productClasses && productClasses.length) params.set('product_classes', productClasses.join(','));
+    const url = "http://127.0.0.1:8000/api/value-by-class" + (params.toString() ? `?${params.toString()}` : '');
+
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
         const formatted = data.map((d) => ({
@@ -20,7 +25,7 @@ const ValByProductClass = () => {
         setClassData(formatted);
       })
       .catch((err) => console.error("Error fetching product class data:", err));
-  }, []);
+  }, [warehouses, productClasses]);
 
   return (
         <Doughnut

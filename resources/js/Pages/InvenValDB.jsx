@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import Select from 'react-select';
 import '@css/dashboard.css';
 import ValByProductClass from './Charts/InvenVal/ValByProductClass';
 import ValByWarehouse from './Charts/InvenVal/ValByWarehouse'
@@ -9,14 +10,24 @@ const COLORS = ["#38c172", "#f6ad55", "#e3342f", "#6cb2eb"];
 const InvenValDB = () => {
     const [stocks, setStocks] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState([]); 
-    const [warehouse, setWarehouse] = useState('');
-    const [productClass, setProductClass] = useState('');
+    const [stats, setStats] = useState([]);
+    const [selectedWarehouses, setSelectedWarehouses] = useState([]);
+    const [selectedProductClasses, setSelectedProductClasses] = useState([]);
+    const [appliedWarehouses, setAppliedWarehouses] = useState([]);
+    const [appliedProductClasses, setAppliedProductClasses] = useState([]);
+    const [warehouses, setWarehouses] = useState([]);
+    const [productClasses, setProductClasses] = useState([]);
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
 
     useEffect(() => {
-        fetch("http://127.0.0.1:8000/api/stats")
+        const params = new URLSearchParams();
+        if (appliedWarehouses && appliedWarehouses.length) params.set('warehouses', appliedWarehouses.join(','));
+        if (appliedProductClasses && appliedProductClasses.length) params.set('product_classes', appliedProductClasses.join(','));
+        const url = "http://127.0.0.1:8000/api/stats" + (params.toString() ? `?${params.toString()}` : '');
+
+        fetch(url)
             .then((res) => res.json())
             .then((data) => {
                 setStats([
@@ -27,10 +38,15 @@ const InvenValDB = () => {
                 ]);
             })
             .catch((err) => console.error("Error fetching stats:", err));
-    }, []);
+    }, [appliedWarehouses, appliedProductClasses]);
 
     useEffect(() => {
-        fetch("http://127.0.0.1:8000/api/stocks")
+        const params = new URLSearchParams();
+        if (appliedWarehouses && appliedWarehouses.length) params.set('warehouses', appliedWarehouses.join(','));
+        if (appliedProductClasses && appliedProductClasses.length) params.set('product_classes', appliedProductClasses.join(','));
+        const url = "http://127.0.0.1:8000/api/stocks" + (params.toString() ? `?${params.toString()}` : '');
+
+        fetch(url)
             .then((response) => response.json())
             .then((data) => {
                 const sortedStocks = data
@@ -43,45 +59,116 @@ const InvenValDB = () => {
                 console.error("Error fetching stocks:", error);
                 setLoading(false);
             });
+    }, [appliedWarehouses, appliedProductClasses]);
+
+    useEffect(() => {
+        fetch("http://127.0.0.1:8000/api/value-by-warehouse")
+            .then((res) => res.json())
+            .then((data) => {
+                const formatted = data.map((d) => d.Warehouse).filter(Boolean);
+                setWarehouses(formatted);
+            })
+            .catch((err) => console.error("Error fetching warehouses:", err));
     }, []);
+
+    useEffect(() => {
+        fetch("http://127.0.0.1:8000/api/value-by-class")
+            .then((res) => res.json())
+            .then((data) => {
+                const formatted = data.map((d) => d.ProductClass).filter(Boolean);
+                setProductClasses(formatted);
+            })
+            .catch((err) => console.error("Error fetching product classes:", err));
+    }, []);
+
+    const PortalSelect = (props) => {
+        const wrapperRef = useRef(null);
+        const [width, setWidth] = useState(null);
+
+        useEffect(() => {
+            const update = () => {
+                if (wrapperRef.current) setWidth(wrapperRef.current.offsetWidth);
+            };
+            update();
+            window.addEventListener('resize', update);
+            return () => window.removeEventListener('resize', update);
+        }, []);
+
+        const userStyles = props.styles || {};
+        const mergedStyles = {
+            ...userStyles,
+            menuPortal: (base, state) => {
+                const baseResult = userStyles.menuPortal ? userStyles.menuPortal(base, state) : base;
+                return { ...baseResult, zIndex: 9999 };
+            },
+            menu: (base, state) => {
+                const baseResult = userStyles.menu ? userStyles.menu(base, state) : base;
+                return { ...baseResult, width: width ? width : baseResult.width };
+            },
+        };
+
+        return (
+            <div ref={wrapperRef} style={{ display: 'inline-block', width: '100%' }}>
+                <Select
+                    {...props}
+                    styles={mergedStyles}
+                    menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
+                    menuPosition="fixed"
+                />
+            </div>
+        );
+    };
 
     return (
         <div className="dashboard-root">
             <div className="dashboard-container">
-                <h1 className="dashboard-title">Inventory Valuation Dashboard</h1>
-                <div className="dashboard-subtitle">
-                    Live snapshot of inventory value and key metrics.
+                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                    <div>
+                        <h1 className="dashboard-title">Inventory Valuation Dashboard</h1>
+                        <div className="dashboard-subtitle">
+                            Live snapshot of inventory value and key metrics.
+                        </div>
+                    </div>
+                    {!showFilters && (
+                        <div style={{marginLeft: '16px', marginBottom: '90px'}}>
+                            <button className="btn-primary" onClick={() => setShowFilters(true)}>Filter</button>
+                        </div>
+                    )}
                 </div>
 
-            {/*Filter card*/}
-            <div className="dashboard-table-panel-top">
-                <div>
-                    <div className="dashboard-panel-title-filter">Filters</div>        
-                    <div className="dashboardFilterClose">
-                        <button>Hide</button>
+            <div className={`dashboard-table-panel-top filter-panel ${showFilters ? 'open' : ''}`} aria-hidden={!showFilters}>
+                    <div>
+                        <div className="dashboard-panel-title-filter">Filters</div>        
+                        <div className="dashboardFilterClose">
+                            <button onClick={() => setShowFilters(false)}>Hide</button>
+                        </div>
+
+                    </div>
+                    <div className="dashboard-filters">
+                    <div className="filter-item">
+                        <label className="filter-label">Warehouse</label>
+                        <PortalSelect
+                            isMulti
+                            options={warehouses.map(w => ({ value: w, label: w }))}
+                            value={selectedWarehouses}
+                            onChange={setSelectedWarehouses}
+                            placeholder="Select warehouses"
+                            className="react-select-container"
+                            classNamePrefix="react-select"
+                        />
                     </div>
 
-                </div>
-                {/* Filter form - UI only (no filtering logic yet) */}
-                <div className="dashboard-filters">
                     <div className="filter-item">
-                        <label htmlFor="warehouse-select" className="filter-label">Warehouse</label>
-                        <select id="warehouse-select" value={warehouse} onChange={(e) => setWarehouse(e.target.value)}>
-                            <option value="">All</option>
-                            <option value="WH-001">WH-001</option>
-                            <option value="WH-002">WH-002</option>
-                            <option value="WH-003">WH-003</option>
-                        </select>
-                    </div>
-
-                    <div className="filter-item">
-                        <label htmlFor="product-class-select" className="filter-label">Product Class</label>
-                        <select id="product-class-select" value={productClass} onChange={(e) => setProductClass(e.target.value)}>
-                            <option value="">All</option>
-                            <option value="A">A</option>
-                            <option value="B">B</option>
-                            <option value="C">C</option>
-                        </select>
+                        <label className="filter-label">Product Class</label>
+                        <PortalSelect
+                            isMulti
+                            options={productClasses.map(c => ({ value: c, label: c }))}
+                            value={selectedProductClasses}
+                            onChange={setSelectedProductClasses}
+                            placeholder="Select product classes"
+                            className="react-select-container"
+                            classNamePrefix="react-select"
+                        />
                     </div>
 
                     <div className="filter-item">
@@ -94,12 +181,30 @@ const InvenValDB = () => {
                         <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
                     </div>
 
-                    <div className="filter-actions">
-                        <button type="button" onClick={() => {/* TODO: apply filters */}} className="btn-primary">Apply</button>
-                        <button type="button" onClick={() => { setWarehouse(''); setProductClass(''); setDateFrom(''); setDateTo(''); }} className="btn-secondary">Reset</button>
+                        <div className="filter-actions">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAppliedWarehouses(selectedWarehouses.map(s => s.value));
+                                    setAppliedProductClasses(selectedProductClasses.map(s => s.value));
+                                }}
+                                className="btn-primary"
+                            >Apply</button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSelectedWarehouses([]);
+                                    setSelectedProductClasses([]);
+                                    setDateFrom('');
+                                    setDateTo('');
+                                    setAppliedWarehouses([]);
+                                    setAppliedProductClasses([]);
+                                }}
+                                className="btn-secondary"
+                            >Reset</button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
 
             {/* Dashboard cards */}
@@ -128,14 +233,14 @@ const InvenValDB = () => {
                 <div className="dashboard-panel">
                     <div className="dashboard-panel-title">Value by Warehouse</div>
                     <div className="dashboard-bar-chart">
-                        <ValByWarehouse />
+                        <ValByWarehouse warehouses={appliedWarehouses} productClasses={appliedProductClasses} />
                     </div>
                 </div>
 
                 <div className="dashboard-panel">
                 <div className="dashboard-panel-title">Value by Product Class</div>
                     <div className="dashboard-doughnut-chart"> 
-                        <ValByProductClass />
+                        <ValByProductClass warehouses={appliedWarehouses} productClasses={appliedProductClasses} />
                     </div>
                 </div>
 

@@ -135,6 +135,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-top: 50px;
+    margin-left: 30px;
 }
 
 .dashboard-doughnut-chart {
@@ -181,6 +183,25 @@
     z-index: 3; /* keep filter panel above background but not obstructive */
 }
 
+/* Animated filter panel: collapsed by default, expands when .open is present */
+.filter-panel {
+    overflow: hidden;
+    max-height: 0; /* collapsed */
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: max-height 300ms cubic-bezier(.2,.9,.2,1), opacity 220ms ease, transform 260ms cubic-bezier(.2,.9,.2,1);
+    will-change: max-height, opacity, transform;
+    margin-top: -3rem; /* when collapsed we don't want extra spacing */
+}
+
+.filter-panel.open {
+    max-height: 520px; /* large enough to contain the form on most screens */
+    opacity: 1;
+    transform: translateY(0);
+    margin-bottom: 2rem; /* restore spacing when open */
+    margin-top: 0;
+}
+
 .dashboard-table-panel-top > div {
     display: flex;
     align-items: center;
@@ -221,7 +242,7 @@
 .filter-item {
     display: flex;
     flex-direction: column;
-    min-width: 160px;
+    min-width: 390px;
 }
 
 .filter-label {
@@ -241,9 +262,30 @@
     color: #111827;
 }
 
+/* Custom caret for selects used in the filter bar */
+.dashboard-filters select {
+    /* ensure space for the caret */
+    padding-right: 2.2rem;
+    /* remove native appearance for consistency */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24'%3E%3Cpath fill='%23888' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    background-size: 14px 14px;
+}
+
+/* On focus, keep the caret visible and slightly darker */
+.dashboard-filters select:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
+}
+
 .filter-actions {
     display: flex;
     gap: 0.6rem;
+    margin-top: 1.5rem;
     margin-left: auto; /* push buttons to the right on larger screens */
 }
 

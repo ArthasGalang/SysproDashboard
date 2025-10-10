@@ -7,36 +7,6 @@ use Inertia\Inertia;
 use App\Http\Controllers\InvenValDBController;
 use Illuminate\Support\Facades\DB;
 
-Route::get('/api/value-by-class', function () {
-    $data = DB::select("
-        SELECT ProductClass, SUM(QtyOnHand * UnitCost) as TotalValue
-        FROM vw_InvenValDB
-        GROUP BY ProductClass
-    ");
-    return response()->json($data);
-});
-
-Route::get('/api/value-by-warehouse', function () {
-    $data = DB::select("
-        SELECT Warehouse, SUM(QtyOnHand * UnitCost) as TotalValue
-        FROM vw_InvenValDB
-        GROUP BY Warehouse
-    ");
-    return response()->json($data);
-});
-
-Route::get('/api/stats', function () {
-    $data = DB::selectOne("
-        SELECT
-            MAX(GrandTotalValue) AS TotalInventoryValue,
-            SUM(QtyOnHand) AS TotalQuantityOnHand,
-            COUNT(DISTINCT StockCode) AS UniqueStockCodes,
-            MAX(SlowMovingStockTotal) AS SlowMovingStockValue
-        FROM vw_InvenValDB
-    ");
-
-    return response()->json($data);
-});
 
 
 
@@ -49,10 +19,6 @@ Route::get('/api/stats', function () {
 
 
 
-
-
-
-Route::get('/api/stocks', [InvenValDBController::class, 'index']);
 
 
 Route::get('/', function () {

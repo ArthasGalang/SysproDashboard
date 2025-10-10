@@ -1,49 +1,67 @@
-
 import React, { useEffect, useState } from "react";
 import { Doughnut } from "react-chartjs-2";
 import { Chart as ChartJS } from "chart.js/auto";
 import "@css/dashboard.css";
 
-
-const COLORS = ["#38c172", "#f6ad55", "#e3342f", "#6cb2eb"];
+const COLORS = ["#75c579ff", "#ee6866ff"];
 
 const OnTimeLateDelivery = () => {
-  const [classData, setClassData] = useState([]);
+  const [chartData, setChartData] = useState({
+    labels: ["On-Time", "Late"],
+    datasets: [
+      {
+        label: "Deliveries",
+        data: [0, 0],
+        backgroundColor: COLORS,
+      },
+    ],
+  });
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/value-by-class")
-      .then((res) => res.json())
-      .then((data) => {
-        const formatted = data.map((d) => ({
-          name: d.ProductClass,
-          value: Number(d.TotalValue),
-        }));
-        setClassData(formatted);
+    fetch("http://127.0.0.1:8000/api/purchase")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to fetch data");
+        return res.json();
       })
-      .catch((err) => console.error("Error fetching product class data:", err));
+      .then((data) => {
+        const validDeliveries = data.filter(
+          (po) => po.MLastReceiptDat && po.MLatestDueDate
+        );
+
+        const onTimeCount = validDeliveries.filter((po) => {
+          const receipt = new Date(po.MLastReceiptDat);
+          const due = new Date(po.MLatestDueDate);
+          return receipt <= due;
+        }).length;
+
+        const lateCount = validDeliveries.length - onTimeCount;
+
+        setChartData({
+          labels: ["On-Time", "Late"],
+          datasets: [
+            {
+              label: "Deliveries",
+              data: [onTimeCount, lateCount],
+              backgroundColor: COLORS,
+            },
+          ],
+        });
+      })
+      .catch((err) => console.error("Error fetching delivery data:", err));
   }, []);
 
   return (
-        <Doughnut
-          data={{
-            labels: classData.map((d) => d.name),
-            datasets: [
-              {
-                label: "Total Value",
-                data: classData.map((d) => d.value),
-                backgroundColor: COLORS,
-              },
-            ],
-          }}
-          options={{
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: "top",
-              },
-            },
-          }}
-        />
+    <Doughnut
+      data={chartData}
+      options={{
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: "top",
+          },
+        },
+      }}
+    />
   );
 };
 

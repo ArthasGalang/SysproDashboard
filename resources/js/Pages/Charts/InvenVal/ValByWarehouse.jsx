@@ -4,11 +4,16 @@ import { Bar } from 'react-chartjs-2';
 
 const COLORS = ["#38c172", "#f6ad55", "#e3342f", "#6cb2eb"];
 
-const ValByWarehouse = () => {
+const ValByWarehouse = ({ warehouses = [], productClasses = [] }) => {
     const [warehouseData, setWarehouseData] = useState([]);
 
     useEffect(() => {
-        fetch("http://127.0.0.1:8000/api/value-by-warehouse")
+        const params = new URLSearchParams();
+        if (warehouses && warehouses.length) params.set('warehouses', warehouses.join(','));
+        if (productClasses && productClasses.length) params.set('product_classes', productClasses.join(','));
+        const url = "http://127.0.0.1:8000/api/value-by-warehouse" + (params.toString() ? `?${params.toString()}` : '');
+
+        fetch(url)
             .then((res) => res.json())
             .then((data) => {
                 const formatted = data.map((d) => ({
@@ -18,7 +23,7 @@ const ValByWarehouse = () => {
                 setWarehouseData(formatted);
             })
             .catch((err) => console.error("Error fetching warehouse data:", err));
-    }, []);
+    }, [warehouses, productClasses]);
 
     return (
                 <Bar
