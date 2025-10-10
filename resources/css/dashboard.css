@@ -174,8 +174,11 @@
     background: #fff;
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-    padding: 2rem;
+    padding: 1.25rem 1.5rem; /* slightly reduced vertical padding */
     margin-top: 1.5rem;
+    margin-bottom: 1.25rem; /* ensure space between filters and cards below */
+    position: relative;
+    z-index: 3; /* keep filter panel above background but not obstructive */
 }
 
 .dashboard-table-panel-top > div {
@@ -195,7 +198,7 @@
     background: transparent;
     border: none;
     color: #1f2937; /* dark text */
-    padding: 0.25rem 0.6rem; /* tighter padding to match title height */
+    padding: 0.251rem 0.6rem; /* tighter padding to match title height */
     border-radius: 6px;
     cursor: pointer;
     font-weight: 600;
@@ -204,6 +207,86 @@
 
 .dashboardFilterClose button:hover{
     background: rgba(0,0,0,0.03);
+}
+
+/* Filter UI styling */
+.dashboard-filters {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 160px;
+}
+
+.filter-label {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-bottom: 0.35rem;
+}
+
+.dashboard-filters select,
+.dashboard-filters input[type="date"],
+.dashboard-filters input[type="text"] {
+    padding: 0.45rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #e6e9ef;
+    background: #ffffff;
+    font-size: 0.95rem;
+    color: #111827;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 0.6rem;
+    margin-left: auto; /* push buttons to the right on larger screens */
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 0.5rem 0.9rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-primary {
+    background: #2563eb; /* indigo */
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #1e40af;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: #374151;
+    border: 1px solid #e6e9ef;
+}
+
+.btn-secondary:hover {
+    background: #f9fafb;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    .dashboard-filters {
+        gap: 0.75rem;
+    }
+    .filter-item {
+        min-width: 140px;
+    }
+    .dashboard-doughnut-chart {
+        width: 360px;
+        height: 360px;
+    }
 }
 
 .dashboard-table {

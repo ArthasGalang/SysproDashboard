@@ -10,6 +10,10 @@ const InvenValDB = () => {
     const [stocks, setStocks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState([]); 
+    const [warehouse, setWarehouse] = useState('');
+    const [productClass, setProductClass] = useState('');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
 
     useEffect(() => {
         fetch("http://127.0.0.1:8000/api/stats")
@@ -43,19 +47,57 @@ const InvenValDB = () => {
 
     return (
         <div className="dashboard-root">
-            <h1 className="dashboard-title">Inventory Valuation Dashboard</h1>
-            <div className="dashboard-subtitle">
-                Live snapshot of inventory value and key metrics.
-            </div>
+            <div className="dashboard-container">
+                <h1 className="dashboard-title">Inventory Valuation Dashboard</h1>
+                <div className="dashboard-subtitle">
+                    Live snapshot of inventory value and key metrics.
+                </div>
 
             {/*Filter card*/}
-            <div className="dashboard-table-panel-top" style={{ marginBottom: '40px' }}>
+            <div className="dashboard-table-panel-top">
                 <div>
                     <div className="dashboard-panel-title-filter">Filters</div>        
                     <div className="dashboardFilterClose">
                         <button>Hide</button>
                     </div>
 
+                </div>
+                {/* Filter form - UI only (no filtering logic yet) */}
+                <div className="dashboard-filters">
+                    <div className="filter-item">
+                        <label htmlFor="warehouse-select" className="filter-label">Warehouse</label>
+                        <select id="warehouse-select" value={warehouse} onChange={(e) => setWarehouse(e.target.value)}>
+                            <option value="">All</option>
+                            <option value="WH-001">WH-001</option>
+                            <option value="WH-002">WH-002</option>
+                            <option value="WH-003">WH-003</option>
+                        </select>
+                    </div>
+
+                    <div className="filter-item">
+                        <label htmlFor="product-class-select" className="filter-label">Product Class</label>
+                        <select id="product-class-select" value={productClass} onChange={(e) => setProductClass(e.target.value)}>
+                            <option value="">All</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                        </select>
+                    </div>
+
+                    <div className="filter-item">
+                        <label className="filter-label">Date From</label>
+                        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                    </div>
+
+                    <div className="filter-item">
+                        <label className="filter-label">Date To</label>
+                        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                    </div>
+
+                    <div className="filter-actions">
+                        <button type="button" onClick={() => {/* TODO: apply filters */}} className="btn-primary">Apply</button>
+                        <button type="button" onClick={() => { setWarehouse(''); setProductClass(''); setDateFrom(''); setDateTo(''); }} className="btn-secondary">Reset</button>
+                    </div>
                 </div>
             </div>
 
@@ -135,6 +177,7 @@ const InvenValDB = () => {
                         )}
                     </tbody>
                 </table>
+            </div>
             </div>
         </div>
     );
