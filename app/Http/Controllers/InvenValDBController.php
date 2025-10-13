@@ -28,6 +28,30 @@ class InvenValDBController extends Controller
         }
 
         $stocks = $query->get();
-        return response()->json($stocks);
+
+        // Calculate stats
+        $totalInventoryValue = $stocks->sum('TotalValue');
+        $totalQuantityOnHand = $stocks->sum('QtyOnHand');
+        $uniqueStockCodes = $stocks->unique('StockCode')->count();
+
+        // Slow-Moving Stock Value: sum TotalValue where LastMovementDate is null or > 180 days ago
+        $slowMovingThreshold = now()->subDays(180);
+        $slowMovingStockValue = $stocks->filter(function($item) use ($slowMovingThreshold) {
+            if (empty($item->LastMovementDate)) return true;
+            try {
+                $date = \Carbon\Carbon::parse($item->LastMovementDate);
+                return $date->lessThan($slowMovingThreshold);
+            } catch (\Exception $e) {
+                return false;
+            }
+        })->sum('TotalValue');
+
+        return response()->json([
+            'TotalInventoryValue' => $totalInventoryValue,
+            'TotalQuantityOnHand' => $totalQuantityOnHand,
+            'UniqueStockCodes' => $uniqueStockCodes,
+            'SlowMovingStockValue' => $slowMovingStockValue,
+            'data' => $stocks,
+        ]);
     }
 }

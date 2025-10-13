@@ -3,6 +3,7 @@ import Select from 'react-select';
 import '@css/dashboard.css';
 import ValByProductClass from './Charts/InvenVal/ValByProductClass';
 import ValByWarehouse from './Charts/InvenVal/ValByWarehouse'
+import LoadingModal from '../Components/LoadingModal';
 
 
 const COLORS = ["#38c172", "#f6ad55", "#e3342f", "#6cb2eb"];
@@ -10,6 +11,10 @@ const COLORS = ["#38c172", "#f6ad55", "#e3342f", "#6cb2eb"];
 const InvenValDB = () => {
     const [stocks, setStocks] = useState([]);
     const [loading, setLoading] = useState(true);
+    // Track active fetches to reliably show/hide global fetching modal
+    const [fetching, setFetching] = useState(true); // true on initial load
+    const fetchCounterRef = useRef(0);
+    const [manualFetching, setManualFetching] = useState(false);
     const [stats, setStats] = useState([]);
     const [selectedWarehouses, setSelectedWarehouses] = useState([]);
     const [selectedProductClasses, setSelectedProductClasses] = useState([]);
@@ -25,7 +30,11 @@ const InvenValDB = () => {
         const params = new URLSearchParams();
         if (appliedWarehouses && appliedWarehouses.length) params.set('warehouses', appliedWarehouses.join(','));
         if (appliedProductClasses && appliedProductClasses.length) params.set('product_classes', appliedProductClasses.join(','));
-        const url = "http://127.0.0.1:8000/api/stats" + (params.toString() ? `?${params.toString()}` : '');
+        const url = "http://127.0.0.1:8000/api/invenvaldb" + (params.toString() ? `?${params.toString()}` : '');
+
+        // increment fetch counter and show modal
+        fetchCounterRef.current += 1;
+        setFetching(true);
 
         fetch(url)
             .then((res) => res.json())
@@ -37,19 +46,31 @@ const InvenValDB = () => {
                     { label: 'Slow-Moving Stock Value', value: `$${Number(data.SlowMovingStockValue).toLocaleString()}`, icon: null, highlight: true },
                 ]);
             })
-            .catch((err) => console.error("Error fetching stats:", err));
+            .catch((err) => console.error("Error fetching stats:", err))
+            .finally(() => {
+                fetchCounterRef.current = Math.max(0, fetchCounterRef.current - 1);
+                if (fetchCounterRef.current === 0) {
+                    setFetching(false);
+                    setManualFetching(false);
+                }
+            });
     }, [appliedWarehouses, appliedProductClasses]);
 
     useEffect(() => {
         const params = new URLSearchParams();
         if (appliedWarehouses && appliedWarehouses.length) params.set('warehouses', appliedWarehouses.join(','));
         if (appliedProductClasses && appliedProductClasses.length) params.set('product_classes', appliedProductClasses.join(','));
-        const url = "http://127.0.0.1:8000/api/stocks" + (params.toString() ? `?${params.toString()}` : '');
+        const url = "http://127.0.0.1:8000/api/invenvaldb" + (params.toString() ? `?${params.toString()}` : '');
+
+        // increment fetch counter and show modal
+        fetchCounterRef.current += 1;
+        setFetching(true);
 
         fetch(url)
             .then((response) => response.json())
             .then((data) => {
-                const sortedStocks = data
+                const items = Array.isArray(data.data) ? data.data : [];
+                const sortedStocks = items
                     .sort((a, b) => (Number(b.TotalValue) || 0) - (Number(a.TotalValue) || 0))
                     .slice(0, 10);
                 setStocks(sortedStocks);
@@ -58,28 +79,40 @@ const InvenValDB = () => {
             .catch((error) => {
                 console.error("Error fetching stocks:", error);
                 setLoading(false);
+            })
+            .finally(() => {
+                fetchCounterRef.current = Math.max(0, fetchCounterRef.current - 1);
+                if (fetchCounterRef.current === 0) {
+                    setFetching(false);
+                    setManualFetching(false);
+                }
             });
     }, [appliedWarehouses, appliedProductClasses]);
 
     useEffect(() => {
-        fetch("http://127.0.0.1:8000/api/value-by-warehouse")
+        fetchCounterRef.current += 1;
+        setFetching(true);
+        fetch("http://127.0.0.1:8000/api/invenvaldb")
             .then((res) => res.json())
             .then((data) => {
-                const formatted = data.map((d) => d.Warehouse).filter(Boolean);
-                setWarehouses(formatted);
+                const items = Array.isArray(data.data) ? data.data : [];
+                const warehouseSet = new Set();
+                const productClassSet = new Set();
+                items.forEach((item) => {
+                    if (item.Warehouse) warehouseSet.add(item.Warehouse);
+                    if (item.ProductClass) productClassSet.add(item.ProductClass);
+                });
+                setWarehouses(Array.from(warehouseSet));
+                setProductClasses(Array.from(productClassSet));
             })
-            .catch((err) => console.error("Error fetching warehouses:", err));
+            .catch((err) => console.error("Error fetching filter options:", err))
+            .finally(() => {
+                fetchCounterRef.current = Math.max(0, fetchCounterRef.current - 1);
+                if (fetchCounterRef.current === 0) setFetching(false);
+            });
     }, []);
 
-    useEffect(() => {
-        fetch("http://127.0.0.1:8000/api/value-by-class")
-            .then((res) => res.json())
-            .then((data) => {
-                const formatted = data.map((d) => d.ProductClass).filter(Boolean);
-                setProductClasses(formatted);
-            })
-            .catch((err) => console.error("Error fetching product classes:", err));
-    }, []);
+    // Reusable LoadingModal imported from components
 
     const PortalSelect = (props) => {
         const wrapperRef = useRef(null);
@@ -121,8 +154,9 @@ const InvenValDB = () => {
 
     return (
         <div className="dashboard-root">
+            <LoadingModal visible={fetching || manualFetching} text={manualFetching ? 'Fetching data' : 'Fetching data'} />
             <div className="dashboard-container">
-                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                <div className="dashboard-header">
                     <div>
                         <h1 className="dashboard-title">Inventory Valuation Dashboard</h1>
                         <div className="dashboard-subtitle">
@@ -130,61 +164,62 @@ const InvenValDB = () => {
                         </div>
                     </div>
                     {!showFilters && (
-                        <div style={{marginLeft: '16px', marginBottom: '90px'}}>
+                        <div className="dashboard-header-filter-btn">
                             <button className="btn-primary" onClick={() => setShowFilters(true)}>Filter</button>
                         </div>
                     )}
                 </div>
 
-            <div className={`dashboard-table-panel-top filter-panel ${showFilters ? 'open' : ''}`} aria-hidden={!showFilters}>
+                <div className={`dashboard-table-panel-top filter-panel ${showFilters ? 'open' : ''}`} aria-hidden={!showFilters}>
                     <div>
-                        <div className="dashboard-panel-title-filter">Filters</div>        
+                        <div className="dashboard-panel-title-filter">Filters</div>
                         <div className="dashboardFilterClose">
                             <button onClick={() => setShowFilters(false)}>Hide</button>
                         </div>
-
                     </div>
                     <div className="dashboard-filters">
-                    <div className="filter-item">
-                        <label className="filter-label">Warehouse</label>
-                        <PortalSelect
-                            isMulti
-                            options={warehouses.map(w => ({ value: w, label: w }))}
-                            value={selectedWarehouses}
-                            onChange={setSelectedWarehouses}
-                            placeholder="Select warehouses"
-                            className="react-select-container"
-                            classNamePrefix="react-select"
-                        />
-                    </div>
+                        <div className="filter-item">
+                            <label className="filter-label">Warehouse</label>
+                            <PortalSelect
+                                isMulti
+                                options={warehouses.map(w => ({ value: w, label: w }))}
+                                value={selectedWarehouses}
+                                onChange={setSelectedWarehouses}
+                                placeholder="Select warehouses"
+                                className="react-select-container"
+                                classNamePrefix="react-select"
+                            />
+                        </div>
 
-                    <div className="filter-item">
-                        <label className="filter-label">Product Class</label>
-                        <PortalSelect
-                            isMulti
-                            options={productClasses.map(c => ({ value: c, label: c }))}
-                            value={selectedProductClasses}
-                            onChange={setSelectedProductClasses}
-                            placeholder="Select product classes"
-                            className="react-select-container"
-                            classNamePrefix="react-select"
-                        />
-                    </div>
+                        <div className="filter-item">
+                            <label className="filter-label">Product Class</label>
+                            <PortalSelect
+                                isMulti
+                                options={productClasses.map(c => ({ value: c, label: c }))}
+                                value={selectedProductClasses}
+                                onChange={setSelectedProductClasses}
+                                placeholder="Select product classes"
+                                className="react-select-container"
+                                classNamePrefix="react-select"
+                            />
+                        </div>
 
-                    <div className="filter-item">
-                        <label className="filter-label">Date From</label>
-                        <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-                    </div>
+                        <div className="filter-item">
+                            <label className="filter-label">Date From</label>
+                            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                        </div>
 
-                    <div className="filter-item">
-                        <label className="filter-label">Date To</label>
-                        <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-                    </div>
+                        <div className="filter-item">
+                            <label className="filter-label">Date To</label>
+                            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                        </div>
 
                         <div className="filter-actions">
                             <button
                                 type="button"
                                 onClick={() => {
+                                    setManualFetching(true);
+                                    setFetching(true);
                                     setAppliedWarehouses(selectedWarehouses.map(s => s.value));
                                     setAppliedProductClasses(selectedProductClasses.map(s => s.value));
                                 }}
@@ -206,83 +241,77 @@ const InvenValDB = () => {
                     </div>
                 </div>
 
+                <div className="dashboard-cards">
+                    {[
+                        { label: 'Total Inventory Value', highlight: false },
+                        { label: 'Total Quantity on Hand', highlight: false },
+                        { label: 'Unique Stock Codes', highlight: false },
+                        { label: 'Slow-Moving Stock Value', highlight: true },
+                    ].map((card, idx) => {
+                        const stat = stats.find(s => s.label === card.label);
+                        return (
+                            <div
+                                key={card.label}
+                                className={`dashboard-card${card.highlight ? ' dashboard-card-red' : ''}`}
+                            >
+                                <span className="dashboard-card-label">{card.label}</span>
+                                <span className="dashboard-card-value">{stat ? stat.value : 'Loading...'}</span>
+                            </div>
+                        );
+                    })}
+                </div>
 
-            {/* Dashboard cards */}
-            <div className="dashboard-cards">
-                {[
-                    { label: 'Total Inventory Value', highlight: false },
-                    { label: 'Total Quantity on Hand', highlight: false },
-                    { label: 'Unique Stock Codes', highlight: false },
-                    { label: 'Slow-Moving Stock Value', highlight: true },
-                ].map((card, idx) => {
-                    const stat = stats.find(s => s.label === card.label);
-                    return (
-                        <div
-                            key={card.label}
-                            className={`dashboard-card${card.highlight ? ' dashboard-card-red' : ''}`}
-                        >
-                            <span className="dashboard-card-label">{card.label}</span>
-                            <span className="dashboard-card-value">{stat ? stat.value : 'Loading...'}</span>
+                <div className="dashboard-row">
+                    <div className="dashboard-panel">
+                        <div className="dashboard-panel-title">Value by Warehouse</div>
+                        <div className="dashboard-bar-chart">
+                            <ValByWarehouse warehouses={appliedWarehouses} productClasses={appliedProductClasses} />
                         </div>
-                    );
-                })}
-            </div>
+                    </div>
 
-            {/* Row with charts */}
-            <div className="dashboard-row">
-                <div className="dashboard-panel">
-                    <div className="dashboard-panel-title">Value by Warehouse</div>
-                    <div className="dashboard-bar-chart">
-                        <ValByWarehouse warehouses={appliedWarehouses} productClasses={appliedProductClasses} />
+                    <div className="dashboard-panel">
+                        <div className="dashboard-panel-title">Value by Product Class</div>
+                        <div className="dashboard-doughnut-chart">
+                            <ValByProductClass warehouses={appliedWarehouses} productClasses={appliedProductClasses} />
+                        </div>
                     </div>
                 </div>
 
-                <div className="dashboard-panel">
-                <div className="dashboard-panel-title">Value by Product Class</div>
-                    <div className="dashboard-doughnut-chart"> 
-                        <ValByProductClass warehouses={appliedWarehouses} productClasses={appliedProductClasses} />
-                    </div>
-                </div>
-
-            </div>
-
-
-            {/* Table */}
-            <div className="dashboard-table-panel">
-                <div className="dashboard-panel-title">Top 10 Inventory Items by Value</div>
-                <table className="dashboard-table">
-                    <thead>
-                        <tr>
-                            <th>STOCK CODE</th>
-                            <th>DESCRIPTION</th>
-                            <th>QTY ON HAND</th>
-                            <th>UNIT COST</th>
-                            <th>TOTAL VALUE</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
+                <div className="dashboard-table-panel">
+                    <div className="dashboard-panel-title">Top 10 Inventory Items by Value</div>
+                    <table className="dashboard-table">
+                        <thead>
                             <tr>
-                                <td colSpan="5" style={{ textAlign: "center" }}>Loading...</td>
+                                <th>STOCK CODE</th>
+                                <th>DESCRIPTION</th>
+                                <th>QTY ON HAND</th>
+                                <th>UNIT COST</th>
+                                <th>TOTAL VALUE</th>
                             </tr>
-                        ) : stocks.length === 0 ? (
-                            <tr>
-                                <td colSpan="5" style={{ textAlign: "center" }}>No data available</td>
-                            </tr>
-                        ) : (
-                            stocks.map((row, idx) => (
-                                <tr key={idx}>
-                                    <td>{row.StockCode ?? ""}</td>
-                                    <td>{row.ProductDescription ?? ""}</td>
-                                    <td>{Number(row.QtyOnHand ?? 0).toLocaleString()}</td>
-                                    <td>{row.UnitCost ? `$${Number(row.UnitCost).toFixed(2)}` : ""}</td>
-                                    <td>{row.TotalValue ? `$${Number(row.TotalValue).toFixed(2)}` : ""}</td>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                <tr>
+                                    <td colSpan="5" className="dashboard-table-value" style={{ textAlign: "center" }}>Loading...</td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                            ) : stocks.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5" className="dashboard-table-value" style={{ textAlign: "center" }}>No data available</td>
+                                </tr>
+                            ) : (
+                                stocks.map((row, idx) => (
+                                    <tr key={idx}>
+                                        <td>{row.StockCode ?? ""}</td>
+                                        <td>{row.ProductDescription ?? ""}</td>
+                                        <td>{Number(row.QtyOnHand ?? 0).toLocaleString()}</td>
+                                        <td>{row.UnitCost ? `$${Number(row.UnitCost).toFixed(2)}` : ""}</td>
+                                        <td>{row.TotalValue ? `$${Number(row.TotalValue).toFixed(2)}` : ""}</td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );

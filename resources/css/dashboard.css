@@ -1,3 +1,28 @@
+/* Uniform dashboard header layout for both dashboards */
+.dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.dashboard-header-filter-btn {
+    margin-left: 16px;
+    margin-top: 65px;
+}
+
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .dashboard-header-filter-btn {
+        margin-left: 0;
+        margin-top: 0.5rem;
+    }
+}
 .dashboard-root {
 	min-height: 100vh;
 	background: #f4f6fa;
@@ -9,6 +34,47 @@
 	color: #222;
     font-size: 3rem;
     font-weight: bold;
+}
+
+/* Gear/settings button shown next to dashboard title */
+.dashboard-gear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    margin-left: 6px;
+    transition: background 150ms ease, transform 120ms ease;
+    margin-bottom: 30px;
+}
+.dashboard-gear svg {
+    display: block;
+}
+.dashboard-gear:hover {
+    background: rgba(0,0,0,0.04);
+    transform: translateY(-1px);
+}
+.dashboard-gear:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
+    border-radius: 8px;
+}
+
+/* Input that shows current DB name next to header icon */
+.dashboard-db-input {
+    padding: 0.35rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #e6e9ef;
+    background: #fff;
+    font-size: 0.95rem;
+    color: #111827;
+    min-width: 220px;
+    margin-bottom: 30px;
 }
 
 .dashboard-subtitle {
@@ -176,7 +242,7 @@
     background: #fff;
     border-radius: 10px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-    padding: 1.25rem 1.5rem; /* slightly reduced vertical padding */
+    padding: 1.25rem 1.5rem;
     margin-top: 1.5rem;
     margin-bottom: 1.25rem; /* ensure space between filters and cards below */
     position: relative;
@@ -307,6 +373,21 @@
     background: #1e40af;
 }
 
+.btn-primary-filter{
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+}
+.btn-primary-filter {
+    background: #2563eb; /* indigo */
+    color: #fff;
+}
+
+.btn-primary-filter:hover {
+    background: #1e40af;
+}
+
 .btn-secondary {
     background: transparent;
     color: #374151;
@@ -329,6 +410,153 @@
         width: 360px;
         height: 360px;
     }
+}
+
+/* Additional responsive rules for tablet and mobile */
+@media (max-width: 1200px) {
+    .dashboard-title {
+        font-size: 2.4rem;
+    }
+    .dashboard-cards {
+        gap: 2rem;
+        justify-content: flex-start;
+    }
+    .dashboard-card {
+        flex: 1 1 220px;
+    }
+    .dashboard-panel {
+        flex: 1 1 320px;
+        min-width: 280px;
+        padding: 1rem;
+    }
+    .dashboard-bar-chart {
+        width: 100%;
+        height: 320px;
+        margin-top: 30px;
+        margin-left: 0;
+    }
+    .dashboard-doughnut-chart {
+        width: 420px;
+        height: 420px;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-root {
+        padding: 1rem;
+    }
+    .dashboard-title {
+        font-size: 1.8rem;
+        margin-bottom: 1rem;
+    }
+    .dashboard-subtitle {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+    /* Stack header controls vertically */
+    .dashboard-root > div[style] {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    .dashboard-db-input {
+        min-width: 140px;
+        margin-bottom: 0.25rem;
+    }
+    .dashboard-cards {
+        flex-direction: column;
+        gap: 1.2rem;
+        align-items: stretch;
+        margin-bottom: 1.5rem;
+    }
+    .dashboard-card {
+        width: 100%;
+        flex: 0 0 auto;
+        padding: 1rem 0.75rem;
+        margin-bottom: 0.2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .dashboard-card-value {
+        font-size: 1.3rem;
+    }
+    .dashboard-panel {
+        min-width: 0;
+        width: 100%;
+        padding: 1rem 0.5rem;
+        margin-bottom: 1.2rem;
+    }
+    .dashboard-bar-chart,
+    .dashboard-doughnut-chart {
+        width: 100%;
+        min-width: 0;
+        padding: 0.5rem;
+        box-sizing: border-box;
+        margin: 0 auto;
+    }
+    .dashboard-panel-title {
+        margin-bottom: 0.7rem;
+    }
+    .dashboard-row {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .dashboard-panel {
+        min-width: 0;
+        width: 100%;
+        padding: 1rem;
+    }
+    .dashboard-bar-chart {
+        height: 240px;
+        margin-top: 10px;
+    }
+    .dashboard-doughnut-chart {
+        width: 100%;
+        height: auto;
+        min-height: 260px;
+    }
+    .dashboard-donut-legend {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+    /* Make filter panel fields full-width on mobile */
+    .dashboard-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .filter-item {
+        min-width: 0;
+        width: 100%;
+    }
+    .filter-actions {
+        margin-left: 0;
+        justify-content: flex-start;
+        gap: 0.5rem;
+    }
+    .filter-actions .btn-primary,
+    .filter-actions .btn-secondary {
+        width: auto;
+        padding: 0.5rem 0.75rem;
+    }
+    /* Make table horizontally scrollable on small screens */
+    .dashboard-table-panel {
+        overflow-x: auto;
+    }
+    .dashboard-table {
+        min-width: 640px;
+    }
+    .dashboard-panel-sidegraph {
+        min-width: 0;
+        margin-bottom: 2rem;
+    }
+}
+
+/* Very small screens adjustments */
+@media (max-width: 420px) {
+    .dashboard-title { font-size: 2.5rem; }
+    .dashboard-card-value { font-size: 1.2rem; }
+    .dashboard-db-input { min-width: 100px; }
+    .dashboard-doughnut-chart { min-height: 200px; }
 }
 
 .dashboard-table {

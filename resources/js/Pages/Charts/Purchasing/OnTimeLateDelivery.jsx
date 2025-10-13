@@ -5,7 +5,7 @@ import "@css/dashboard.css";
 
 const COLORS = ["#75c579ff", "#ee6866ff"];
 
-const OnTimeLateDelivery = () => {
+const OnTimeLateDelivery = ({ suppliers = [], buyers = [] }) => {
   const [chartData, setChartData] = useState({
     labels: ["On-Time", "Late"],
     datasets: [
@@ -16,9 +16,14 @@ const OnTimeLateDelivery = () => {
       },
     ],
   });
-
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/purchase")
+    const params = new URLSearchParams();
+    if (suppliers && suppliers.length) params.set('suppliers', suppliers.join(','));
+    if (buyers && buyers.length) params.set('buyers', buyers.join(','));
+
+    const url = "http://127.0.0.1:8000/api/purchase" + (params.toString() ? `?${params.toString()}` : '');
+
+    fetch(url)
       .then((res) => {
         if (!res.ok) throw new Error("Failed to fetch data");
         return res.json();
@@ -48,7 +53,7 @@ const OnTimeLateDelivery = () => {
         });
       })
       .catch((err) => console.error("Error fetching delivery data:", err));
-  }, []);
+  }, [suppliers, buyers]);
 
   return (
     <Doughnut

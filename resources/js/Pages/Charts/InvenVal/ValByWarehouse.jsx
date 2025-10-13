@@ -11,15 +11,20 @@ const ValByWarehouse = ({ warehouses = [], productClasses = [] }) => {
         const params = new URLSearchParams();
         if (warehouses && warehouses.length) params.set('warehouses', warehouses.join(','));
         if (productClasses && productClasses.length) params.set('product_classes', productClasses.join(','));
-        const url = "http://127.0.0.1:8000/api/value-by-warehouse" + (params.toString() ? `?${params.toString()}` : '');
+        const url = "http://127.0.0.1:8000/api/invenvaldb" + (params.toString() ? `?${params.toString()}` : '');
 
         fetch(url)
             .then((res) => res.json())
             .then((data) => {
-                const formatted = data.map((d) => ({
-                    name: d.Warehouse,
-                    value: Number(d.TotalValue),
-                }));
+                // Aggregate by Warehouse
+                const items = Array.isArray(data.data) ? data.data : [];
+                const warehouseMap = {};
+                items.forEach((item) => {
+                    const wh = item.Warehouse || 'Unknown';
+                    if (!warehouseMap[wh]) warehouseMap[wh] = 0;
+                    warehouseMap[wh] += Number(item.TotalValue) || 0;
+                });
+                const formatted = Object.entries(warehouseMap).map(([name, value]) => ({ name, value }));
                 setWarehouseData(formatted);
             })
             .catch((err) => console.error("Error fetching warehouse data:", err));

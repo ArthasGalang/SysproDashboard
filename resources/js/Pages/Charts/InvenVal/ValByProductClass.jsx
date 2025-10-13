@@ -13,15 +13,20 @@ const ValByProductClass = ({ warehouses = [], productClasses = [] }) => {
     const params = new URLSearchParams();
     if (warehouses && warehouses.length) params.set('warehouses', warehouses.join(','));
     if (productClasses && productClasses.length) params.set('product_classes', productClasses.join(','));
-    const url = "http://127.0.0.1:8000/api/value-by-class" + (params.toString() ? `?${params.toString()}` : '');
+    const url = "http://127.0.0.1:8000/api/invenvaldb" + (params.toString() ? `?${params.toString()}` : '');
 
     fetch(url)
       .then((res) => res.json())
       .then((data) => {
-        const formatted = data.map((d) => ({
-          name: d.ProductClass,
-          value: Number(d.TotalValue),
-        }));
+        // Aggregate by ProductClass
+        const items = Array.isArray(data.data) ? data.data : [];
+        const classMap = {};
+        items.forEach((item) => {
+          const cls = item.ProductClass || 'Unknown';
+          if (!classMap[cls]) classMap[cls] = 0;
+          classMap[cls] += Number(item.TotalValue) || 0;
+        });
+        const formatted = Object.entries(classMap).map(([name, value]) => ({ name, value }));
         setClassData(formatted);
       })
       .catch((err) => console.error("Error fetching product class data:", err));
