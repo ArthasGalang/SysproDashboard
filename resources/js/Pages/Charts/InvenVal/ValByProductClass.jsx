@@ -33,26 +33,39 @@ const ValByProductClass = ({ warehouses = [], productClasses = [] }) => {
   }, [warehouses, productClasses]);
 
   return (
-        <Doughnut
-          data={{
-            labels: classData.map((d) => d.name),
-            datasets: [
-              {
-                label: "Total Value",
-                data: classData.map((d) => d.value),
-                backgroundColor: COLORS,
-              },
-            ],
-          }}
-          options={{
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: "top",
-              },
+    <div
+      style={{
+        width: '100%',
+  minWidth: window.innerWidth > 900 ? 360 : 320,
+  minHeight: window.innerWidth > 900 ? 360 : 320,
+  maxWidth: window.innerWidth > 900 ? 500 : 700,
+        margin: '0 auto',
+        boxSizing: 'border-box',
+        padding: window.innerWidth > 900 ? '2rem' : '1rem',
+        transition: 'all 0.3s',
+      }}
+    >
+      <Doughnut
+        data={{
+          labels: classData.map((d) => d.name),
+          datasets: [
+            {
+              label: "Total Value",
+              data: classData.map((d) => d.value),
+              backgroundColor: COLORS,
             },
-          }}
-        />
+          ],
+        }}
+        options={{
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "top",
+            },
+          },
+        }}
+      />
+    </div>
   );
 };
 

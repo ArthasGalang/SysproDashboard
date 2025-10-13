@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import FloatingButton from '../Components/FloatingButton';
 import Select from 'react-select';
 import '@css/dashboard.css';
 import ValByProductClass from './Charts/InvenVal/ValByProductClass';
@@ -156,6 +157,7 @@ const InvenValDB = () => {
         <div className="dashboard-root">
             <LoadingModal visible={fetching || manualFetching} text={manualFetching ? 'Fetching data' : 'Fetching data'} />
             <div className="dashboard-container">
+                {/* ...existing dashboard content... */}
                 <div className="dashboard-header">
                     <div>
                         <h1 className="dashboard-title">Inventory Valuation Dashboard</h1>
@@ -313,6 +315,7 @@ const InvenValDB = () => {
                     </table>
                 </div>
             </div>
+            <FloatingButton iconType="menu" />
         </div>
     );
 };
