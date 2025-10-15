@@ -36,8 +36,8 @@ const ValByProductClass = ({ warehouses = [], productClasses = [] }) => {
     <div
       style={{
         width: '100%',
-  minWidth: window.innerWidth > 900 ? 360 : 320,
-  minHeight: window.innerWidth > 900 ? 360 : 320,
+  minWidth: window.innerWidth > 900 ? 550 : 400,
+  minHeight: window.innerWidth > 900 ? 550 : 400,
   maxWidth: window.innerWidth > 900 ? 500 : 700,
         margin: '0 auto',
         boxSizing: 'border-box',

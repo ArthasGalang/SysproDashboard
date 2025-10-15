@@ -158,7 +158,7 @@ const InvenValDB = () => {
             <LoadingModal visible={fetching || manualFetching} text={manualFetching ? 'Fetching data' : 'Fetching data'} />
             <div className="dashboard-container">
                 {/* ...existing dashboard content... */}
-                <div className="dashboard-header">
+                <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         <h1 className="dashboard-title">Inventory Valuation Dashboard</h1>
                         <div className="dashboard-subtitle">
@@ -166,9 +166,35 @@ const InvenValDB = () => {
                         </div>
                     </div>
                     {!showFilters && (
-                        <div className="dashboard-header-filter-btn">
-                            <button className="btn-primary" onClick={() => setShowFilters(true)}>Filter</button>
-                        </div>
+                        <>
+                            {/* Desktop Filter Button */}
+                            <div className="dashboard-header-filter-btn" style={{ position: 'relative', zIndex: 1002, marginLeft: 'auto', display: window.innerWidth > 600 ? 'block' : 'none' }}>
+                                <button className="btn-primary" onClick={() => setShowFilters(true)}>Filter</button>
+                            </div>
+                            {/* Mobile Filter Card */}
+                            <div
+                                className="dashboard-header-filter-mobile"
+                                style={{
+                                    display: window.innerWidth <= 600 ? 'block' : 'none',
+                                    width: '100%',
+                                    borderRadius: '16px',
+                                    background: '#fff',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                                    margin: '0.5rem 0',
+                                    padding: '0.5rem 0',
+                                    textAlign: 'center',
+                                    fontWeight: 'bold',
+                                    fontSize: '1rem',
+                                    cursor: 'pointer',
+                                    position: 'relative',
+                                    zIndex: 1002,
+                                }}
+                                onClick={() => setShowFilters(true)}
+                            >
+                                Filters
+                                <div style={{ fontSize: '1rem', marginTop: '0.1rem', color: '#222' }}>&#x25BC;</div>
+                            </div>
+                        </>
                     )}
                 </div>
 

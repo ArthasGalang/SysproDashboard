@@ -56,17 +56,30 @@ const OnTimeLateDelivery = ({ suppliers = [], buyers = [] }) => {
   }, [suppliers, buyers]);
 
   return (
-    <Doughnut
-      data={chartData}
-      options={{
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: "top",
-          },
-        },
+    <div
+      style={{
+        width: '100%',
+        minWidth: window.innerWidth > 900 ? 550 : 400,
+        minHeight: window.innerWidth > 900 ? 550 : 400,
+        maxWidth: window.innerWidth > 900 ? 500 : 700,
+        margin: '0 auto',
+        boxSizing: 'border-box',
+        padding: window.innerWidth > 900 ? '2rem' : '1rem',
+        transition: 'all 0.3s',
       }}
-    />
+    >
+      <Doughnut
+        data={chartData}
+        options={{
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "top",
+            },
+          },
+        }}
+      />
+    </div>
   );
 };
 

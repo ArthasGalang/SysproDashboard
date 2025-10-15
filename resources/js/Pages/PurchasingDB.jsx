@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import FloatingButton from '../Components/FloatingButton';
 import Select from 'react-select';
 import '@css/dashboard.css';
 import OnTimeLateDelivery from './Charts/Purchasing/OnTimeLateDelivery';
@@ -15,6 +16,8 @@ const InvenValDB = () => {
     const [selectedBuyers, setSelectedBuyers] = useState([]);
     const [appliedSuppliers, setAppliedSuppliers] = useState([]);
     const [appliedBuyers, setAppliedBuyers] = useState([]);
+    const [appliedDateFrom, setAppliedDateFrom] = useState('');
+    const [appliedDateTo, setAppliedDateTo] = useState('');
     const [suppliers, setSuppliers] = useState([]);
     const [buyers, setBuyers] = useState([]);
     const [dateFrom, setDateFrom] = useState('');
@@ -25,6 +28,8 @@ const InvenValDB = () => {
         const params = new URLSearchParams();
         if (appliedSuppliers && appliedSuppliers.length) params.set('suppliers', appliedSuppliers.join(','));
         if (appliedBuyers && appliedBuyers.length) params.set('buyers', appliedBuyers.join(','));
+        if (appliedDateFrom) params.set('dateFrom', appliedDateFrom);
+        if (appliedDateTo) params.set('dateTo', appliedDateTo);
         const url = "http://127.0.0.1:8000/api/purchase" + (params.toString() ? `?${params.toString()}` : '');
 
         fetch(url)
@@ -53,6 +58,23 @@ const InvenValDB = () => {
                 const totalValid = validDeliveries.length;
                 const onTimePercentage = totalValid > 0 ? (onTimeCount / totalValid) * 100 : 0;
 
+                // PPV Calculation
+                const totalCurGrnValue = data.reduce((sum, po) => sum + (Number(po.TotalCurGrnValue) || 0), 0);
+                const totalOrigPurchaseValue = data.reduce((sum, po) => sum + (Number(po.TotalOrigPurchaseValue) || 0), 0);
+                const ppv = totalOrigPurchaseValue - totalCurGrnValue;
+
+                let ppvDisplay = '';
+                let ppvColor = '';
+                if (ppv > 0) {
+                    ppvDisplay = `+$${ppv.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    ppvColor = '#38c172';
+                } else if (ppv < 0) {
+                    ppvDisplay = `-$${Math.abs(ppv).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    ppvColor = 'red';
+                } else {
+                    ppvDisplay = `$0.00`;
+                    ppvColor = 'default';
+                }
 
                 const now = new Date();
                 const currentMonth = now.getMonth();
@@ -70,7 +92,7 @@ const InvenValDB = () => {
                 setStats([
                     { label: 'Open Purchase Orders Value', value: `$${openPOValue.toLocaleString()}`, color: 'default' },
                     { label: 'Supplier On-Time Delivery', value: `${onTimePercentage.toFixed(2)}%`, color: 'default' },
-                    { label: 'Purchase Price Variance (PPV)', value: `+$`, color: 'green' },
+                    { label: 'Purchase Price Variance (PPV)', value: ppvDisplay, color: ppvColor },
                     { label: 'POs Placed (MTD)', value: mtdCount, color: 'blue' },
                 ]);
             })
@@ -135,7 +157,7 @@ const InvenValDB = () => {
         <div className="dashboard-root">
             <LoadingModal visible={loading} text={loading ? 'Fetching data' : ''} />
             <div className="dashboard-container">
-                <div className="dashboard-header">
+                <div className="dashboard-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         <h1 className="dashboard-title">Purchasing Dashboard</h1>
                         <div className="dashboard-subtitle">
@@ -143,17 +165,47 @@ const InvenValDB = () => {
                         </div>
                     </div>
                     {!showFilters && (
-                        <div className="dashboard-header-filter-btn">
-                            <button className="btn-primary" onClick={() => setShowFilters(true)}>Filter</button>
-                        </div>
+                        <>
+                            {/* Desktop Filter Button */}
+                            <div className="dashboard-header-filter-btn" style={{ position: 'relative', zIndex: 1002, marginLeft: 'auto', display: window.innerWidth > 600 ? 'block' : 'none' }}>
+                                <button
+                                    className="btn-primary"
+                                    style={{ zIndex: 1003, position: 'relative', touchAction: 'manipulation' }}
+                                    onClick={() => setShowFilters(true)}
+                                >Filter</button>
+                            </div>
+                            {/* Mobile Filter Card */}
+                            <div
+                                className="dashboard-header-filter-mobile"
+                                style={{
+                                    display: window.innerWidth <= 600 ? 'block' : 'none',
+                                    width: '100%',
+                                    borderRadius: '16px',
+                                    background: '#fff',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                                    margin: '0.5rem 0',
+                                    padding: '0.5rem 0',
+                                    textAlign: 'center',
+                                    fontWeight: 'bold',
+                                    fontSize: '1rem',
+                                    cursor: 'pointer',
+                                    position: 'relative',
+                                    zIndex: 1002,
+                                }}
+                                onClick={() => setShowFilters(true)}
+                            >
+                                Filters
+                                <div style={{ fontSize: '1rem', marginTop: '0.1rem', color: '#222' }}>&#x25BC;</div>
+                            </div>
+                        </>
                     )}
                 </div>
 
                 <div className={`dashboard-table-panel-top filter-panel ${showFilters ? 'open' : ''}`} aria-hidden={!showFilters}>
-                    <div>
+                    <div style={{ position: 'relative', zIndex: 1001, pointerEvents: 'auto' }}>
                         <div className="dashboard-panel-title-filter">Filters</div>
                         <div className="dashboardFilterClose">
-                            <button onClick={() => setShowFilters(false)}>Hide</button>
+                            <button style={{ zIndex: 1002, position: 'relative', touchAction: 'manipulation' }} onClick={() => setShowFilters(false)}>Hide</button>
                         </div>
                     </div>
                     <div className="dashboard-filters">
@@ -200,6 +252,8 @@ const InvenValDB = () => {
                                     setLoading(true);
                                     setAppliedSuppliers(selectedSuppliers.map(s => s.value));
                                     setAppliedBuyers(selectedBuyers.map(s => s.value));
+                                    setAppliedDateFrom(dateFrom);
+                                    setAppliedDateTo(dateTo);
                                 }}
                                 className="btn-primary"
                             >Apply</button>
@@ -213,6 +267,8 @@ const InvenValDB = () => {
                                     setDateTo('');
                                     setAppliedSuppliers([]);
                                     setAppliedBuyers([]);
+                                    setAppliedDateFrom('');
+                                    setAppliedDateTo('');
                                 }}
                                 className="btn-secondary"
                             >Reset</button>
@@ -221,20 +277,32 @@ const InvenValDB = () => {
                 </div>
 
                 <div className="dashboard-cards">
-                    {[
+                    {[ 
                         { label: 'Open Purchase Orders Value', highlight: false },
                         { label: 'Supplier On-Time Delivery', highlight: false },
-                        { label: 'Purchase Price Variance (PPV)', color: 'green' },
+                        { label: 'Purchase Price Variance (PPV)', color: null },
                         { label: 'POs Placed (MTD)', color: 'blue' },
                     ].map((card, idx) => {
                         const stat = stats.find(s => s.label === card.label);
+                        let valueElem;
+                        if (card.label === 'Purchase Price Variance (PPV)' && stat) {
+                            valueElem = (
+                                <span className="dashboard-card-value" style={{ color: stat.color === '#38c172' ? '#38c172' : stat.color === 'red' ? 'red' : undefined }}>
+                                    {stat.value}
+                                </span>
+                            );
+                        } else {
+                            valueElem = (
+                                <span className="dashboard-card-value">{stat ? stat.value : 'Loading...'}</span>
+                            );
+                        }
                         return (
                             <div
                                 key={card.label}
-                                className={`dashboard-card${card.color === 'blue' ? ' dashboard-card-blue' : card.color === 'green' ? ' dashboard-card-green' : ''}`}
+                                className={`dashboard-card${card.color === 'blue' ? ' dashboard-card-blue' : card.color === '#38c172' ? ' dashboard-card-green' : ''}`}
                             >
                                 <span className="dashboard-card-label">{card.label}</span>
-                                <span className="dashboard-card-value">{stat ? stat.value : 'Loading...'}</span>
+                                {valueElem}
                             </div>
                         );
                     })}
@@ -290,7 +358,7 @@ const InvenValDB = () => {
                                             <td>{row.PONumber ?? ""}</td>
                                             <td>{row.SupplierName ?? ""}</td>
                                             <td>{row.OrderEntryDate ?? ""}</td>
-                                            <td>{row.Name ?? ""}</td>
+                                            <td>{row.BuyerName ?? ""}</td>
                                             <td>{row.POValue ? `$${Number(row.POValue).toFixed(2)}` : ""}</td>
                                         </tr>
                                     ))
@@ -299,6 +367,7 @@ const InvenValDB = () => {
                     </table>
                 </div>
             </div>
+            <FloatingButton iconType="menu" />
         </div>
     );
 };

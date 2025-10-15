@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import FloatingButton from '../Components/FloatingButton';
 import '@css/dashboard.css';
 import AgingAnalysis from './Charts/AR/AgingAnalysis';
 import CurrentOverdue from './Charts/AR/CurrentOverdue';
@@ -115,6 +116,7 @@ const InvenValDB = () => {
                     </tbody>
                 </table>
             </div>
+            <FloatingButton iconType="menu" />
         </div>
     );
 };

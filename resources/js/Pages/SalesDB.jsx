@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import FloatingButton from '../Components/FloatingButton';
 import '../../css/dashboard.css';
 import SalesTrendChart from './Charts/Sales/SalesTrendChart';
 import SalesBySalesperson from './Charts/Sales/SalesBySalesperson';
@@ -118,6 +119,7 @@ const Dashboard = () => {
                     </tbody>
                 </table>
             </div>
+            <FloatingButton iconType="menu" />
         </div>
     );
 };
