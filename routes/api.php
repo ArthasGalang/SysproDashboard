@@ -12,7 +12,89 @@ use Illuminate\Support\Facades\DB;
 
 
 // ---------------------------INVENVAL---------------------------
-Route::get('/invenvaldb', [InvenValDBController::class, 'index']);
+Route::get('/invenvaldb', function() {
+    $warehouses = request()->query('warehouses');
+    $productClasses = request()->query('product_classes');
+    $whereClauses = [];
+    $bindings = [];
+
+    if ($warehouses) {
+        $list = array_filter(array_map('trim', explode(',', $warehouses)));
+        if (count($list)) {
+            $placeholders = implode(',', array_fill(0, count($list), '?'));
+            $whereClauses[] = "b.Warehouse IN ($placeholders)";
+            $bindings = array_merge($bindings, $list);
+        }
+    }
+    if ($productClasses) {
+        $list = array_filter(array_map('trim', explode(',', $productClasses)));
+        if (count($list)) {
+            $placeholders = implode(',', array_fill(0, count($list), '?'));
+            $whereClauses[] = "a.ProductClass IN ($placeholders)";
+            $bindings = array_merge($bindings, $list);
+        }
+    }
+    $whereSql = '';
+    if (count($whereClauses)) {
+        $whereSql = 'WHERE ' . implode(' AND ', $whereClauses);
+    }
+
+    $sql = <<<SQL
+WITH LastMovement AS (
+    SELECT 
+        m.StockCode,
+        m.Warehouse,
+        MAX(m.EntryDate) AS LastMovementDate
+    FROM InvMovements m
+    GROUP BY m.StockCode, m.Warehouse
+)
+SELECT
+    a.StockCode,
+    a.Description AS ProductDescription,
+    a.ProductClass,
+    b.UnitCost,
+    b.Warehouse,
+    c.Description AS WarehouseDescription,
+    b.QtyOnHand,
+    b.UnitCost * b.QtyOnHand AS TotalValue,
+    lm.LastMovementDate
+FROM InvMaster a
+JOIN InvWarehouse b
+    ON a.StockCode = b.StockCode
+JOIN InvWhControl c
+    ON b.Warehouse = c.Warehouse
+LEFT JOIN LastMovement lm
+    ON a.StockCode = lm.StockCode
+   AND b.Warehouse = lm.Warehouse
+$whereSql
+SQL;
+    $data = DB::select($sql, $bindings);
+
+    // Calculate summary stats for dashboard
+    $totalValue = 0;
+    $totalQty = 0;
+    $uniqueStockCodes = [];
+    $slowMovingValue = 0;
+    $slowThreshold = now()->subMonths(12); // 12 months ago
+
+    foreach ($data as $row) {
+        $totalValue += (float)($row->TotalValue ?? 0);
+        $totalQty += (float)($row->QtyOnHand ?? 0);
+        if (!empty($row->StockCode)) $uniqueStockCodes[$row->StockCode] = true;
+        // Slow-moving: no movement in 12+ months
+        if (empty($row->LastMovementDate) || (strtotime($row->LastMovementDate) < $slowThreshold->getTimestamp())) {
+            $slowMovingValue += (float)($row->TotalValue ?? 0);
+        }
+    }
+
+    return response()->json([
+        'data' => $data,
+        'TotalInventoryValue' => $totalValue,
+        'TotalQuantityOnHand' => $totalQty,
+        'UniqueStockCodes' => count($uniqueStockCodes),
+        'SlowMovingStockValue' => $slowMovingValue,
+    ]);
+});
 
 
 // --------------------------PURCHASING--------------------------
@@ -27,8 +109,7 @@ Route::get('/purchase', function() {
         $list = array_filter(array_map('trim', explode(',', $suppliers)));
         if (count($list)) {
             $placeholders = implode(',', array_fill(0, count($list), '?'));
-            // filter by SupplierName (frontend sends SupplierName values)
-            $whereClauses[] = "SupplierName IN ($placeholders)";
+            $whereClauses[] = "a.Supplier IN ($placeholders)";
             $bindings = array_merge($bindings, $list);
         }
     }
@@ -37,18 +118,77 @@ Route::get('/purchase', function() {
         $list = array_filter(array_map('trim', explode(',', $buyers)));
         if (count($list)) {
             $placeholders = implode(',', array_fill(0, count($list), '?'));
-            // filter by Buyer (frontend sends Buyer codes)
-            $whereClauses[] = "Buyer IN ($placeholders)";
+            $whereClauses[] = "a.Buyer IN ($placeholders)";
             $bindings = array_merge($bindings, $list);
         }
     }
 
     $whereSql = '';
     if (count($whereClauses)) {
-        $whereSql = ' WHERE ' . implode(' AND ', $whereClauses);
+        $whereSql = 'WHERE ' . implode(' AND ', $whereClauses);
     }
 
-    $sql = "SELECT * FROM vw_PurchasingDB" . $whereSql . " ORDER BY PONumber DESC";
+    $sql = <<<SQL
+WITH DetailJoin AS (
+    SELECT 
+        d.PurchaseOrder,
+        d.MStockCode,
+        d.MOrderQty,
+        d.MPrice,
+        CAST(d.MLatestDueDate AS DATE) AS MLatestDueDate,
+        CAST(d.MLastReceiptDat AS DATE) AS MLastReceiptDat,
+        ISNULL(SUM(f.CurGrnValue), 0) AS TotalCurGrnValue,
+        ISNULL(SUM(f.OrigPurchValue), 0) AS TotalOrigPurchaseValue
+    FROM PorMasterDetail d
+    LEFT JOIN GrnDetails f
+        ON d.PurchaseOrder = f.PurchaseOrder
+        AND d.MStockCode = f.StockCode
+    GROUP BY 
+        d.PurchaseOrder,
+        d.MStockCode,
+        d.MOrderQty,
+        d.MPrice,
+        d.MLatestDueDate,
+        d.MLastReceiptDat
+)
+SELECT 
+    'PO-' + CAST(CAST(a.PurchaseOrder AS INT) AS VARCHAR) AS PONumber,
+    a.Supplier,
+    b.SupplierName,
+    a.Buyer,
+    e.Name AS BuyerName,
+    a.OrderStatus,
+    a.ActiveFlag,
+    a.CancelledFlag,
+    CAST(a.OrderEntryDate AS DATE) AS OrderEntryDate,
+    CAST(MAX(dj.MLatestDueDate) AS DATE) AS MLatestDueDate,
+    CAST(MAX(dj.MLastReceiptDat) AS DATE) AS MLastReceiptDat,
+    SUM(dj.MPrice) AS TotalPrice,
+    SUM(dj.MOrderQty) AS TotalOrderQty,
+    SUM(dj.MPrice * dj.MOrderQty) AS POValue,
+    SUM(dj.TotalCurGrnValue) AS TotalCurGrnValue,
+    SUM(dj.TotalOrigPurchaseValue) AS TotalOrigPurchaseValue
+FROM PorMasterHdr a
+JOIN ApSupplier b 
+    ON a.Supplier = b.Supplier
+JOIN InvBuyer e
+    ON a.Buyer = e.Buyer
+JOIN DetailJoin dj
+    ON a.PurchaseOrder = dj.PurchaseOrder
+$whereSql
+GROUP BY 
+    a.PurchaseOrder,
+    a.Supplier,
+    b.SupplierName,
+    a.Buyer,
+    e.Name,
+    a.OrderStatus,
+    a.ActiveFlag,
+    a.CancelledFlag,
+    a.OrderEntryDate
+ORDER BY PONumber DESC
+SQL;
+
     $data = DB::select($sql, $bindings);
     return response()->json($data);
 });

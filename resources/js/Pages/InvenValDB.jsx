@@ -11,6 +11,8 @@ const COLORS = ["#38c172", "#f6ad55", "#e3342f", "#6cb2eb"];
 
 const InvenValDB = () => {
     const [stocks, setStocks] = useState([]);
+    const [sortConfig, setSortConfig] = useState({ key: 'TotalValue', direction: 'desc' });
+    const [excludeOutOfStock, setExcludeOutOfStock] = useState(false);
     const [loading, setLoading] = useState(true);
     // Track active fetches to reliably show/hide global fetching modal
     const [fetching, setFetching] = useState(true); // true on initial load
@@ -71,10 +73,7 @@ const InvenValDB = () => {
             .then((response) => response.json())
             .then((data) => {
                 const items = Array.isArray(data.data) ? data.data : [];
-                const sortedStocks = items
-                    .sort((a, b) => (Number(b.TotalValue) || 0) - (Number(a.TotalValue) || 0))
-                    .slice(0, 10);
-                setStocks(sortedStocks);
+                setStocks(items);
                 setLoading(false);
             })
             .catch((error) => {
@@ -89,6 +88,62 @@ const InvenValDB = () => {
                 }
             });
     }, [appliedWarehouses, appliedProductClasses]);
+
+    // Merging (deduplication & aggregation)
+    const mergedStocks = React.useMemo(() => {
+        if (!stocks || stocks.length === 0) return [];
+        const map = new Map();
+        stocks.forEach((row) => {
+            const key = `${row.StockCode}|${row.UnitCost}`;
+            if (!map.has(key)) {
+                map.set(key, { ...row });
+            } else {
+                const agg = map.get(key);
+                agg.QtyOnHand = (Number(agg.QtyOnHand) || 0) + (Number(row.QtyOnHand) || 0);
+                agg.TotalValue = (Number(agg.TotalValue) || 0) + (Number(row.TotalValue) || 0);
+            }
+        });
+        return Array.from(map.values());
+    }, [stocks]);
+
+    // Filtering (out of stock)
+    const filteredStocks = React.useMemo(() => {
+        if (!excludeOutOfStock) return mergedStocks;
+        return mergedStocks.filter(row => Number(row.QtyOnHand) > 0);
+    }, [mergedStocks, excludeOutOfStock]);
+
+    // Sorting
+    const sortableColumns = {
+        QtyOnHand: true,
+        UnitCost: true,
+        TotalValue: true,
+    };
+    const sortedStocks = React.useMemo(() => {
+        if (!filteredStocks || filteredStocks.length === 0) return [];
+        const { key, direction } = sortConfig;
+        if (!sortableColumns[key]) return filteredStocks.slice(0, 10);
+        const sorted = [...filteredStocks].sort((a, b) => {
+            const aVal = Number(a[key]) || 0;
+            const bVal = Number(b[key]) || 0;
+            if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+            if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+        return sorted.slice(0, 10);
+    }, [filteredStocks, sortConfig]);
+
+    const handleSort = (key) => {
+        if (!sortableColumns[key]) return;
+        setSortConfig((prev) => {
+            if (prev.key === key) {
+                // Toggle direction
+                return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+            } else {
+                // New sort key, default to descending
+                return { key, direction: 'desc' };
+            }
+        });
+    };
 
     useEffect(() => {
         fetchCounterRef.current += 1;
@@ -306,15 +361,44 @@ const InvenValDB = () => {
                 </div>
 
                 <div className="dashboard-table-panel">
-                    <div className="dashboard-panel-title">Top 10 Inventory Items by Value</div>
+                    <div className="dashboard-panel-title">Top 10 Inventory Items</div>
+                    <div style={{ marginBottom: 8 }}>
+                        <label style={{ fontWeight: 400, fontSize: '1rem' }}>
+                            <input
+                                type="checkbox"
+                                checked={excludeOutOfStock}
+                                onChange={e => setExcludeOutOfStock(e.target.checked)}
+                                style={{ marginRight: 6 }}
+                            />
+                            Exclude out of stock items
+                        </label>
+                    </div>
                     <table className="dashboard-table">
                         <thead>
                             <tr>
                                 <th>STOCK CODE</th>
                                 <th>DESCRIPTION</th>
-                                <th>QTY ON HAND</th>
-                                <th>UNIT COST</th>
-                                <th>TOTAL VALUE</th>
+                                <th
+                                    style={{ cursor: sortableColumns.QtyOnHand ? 'pointer' : 'default' }}
+                                    onClick={() => handleSort('QtyOnHand')}
+                                >
+                                    QTY ON HAND
+                                    {sortConfig.key === 'QtyOnHand' && (sortConfig.direction === 'asc' ? ' ▲' : ' ▼')}
+                                </th>
+                                <th
+                                    style={{ cursor: sortableColumns.UnitCost ? 'pointer' : 'default' }}
+                                    onClick={() => handleSort('UnitCost')}
+                                >
+                                    UNIT COST
+                                    {sortConfig.key === 'UnitCost' && (sortConfig.direction === 'asc' ? ' ▲' : ' ▼')}
+                                </th>
+                                <th
+                                    style={{ cursor: sortableColumns.TotalValue ? 'pointer' : 'default' }}
+                                    onClick={() => handleSort('TotalValue')}
+                                >
+                                    TOTAL VALUE
+                                    {sortConfig.key === 'TotalValue' && (sortConfig.direction === 'asc' ? ' ▲' : ' ▼')}
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -322,12 +406,12 @@ const InvenValDB = () => {
                                 <tr>
                                     <td colSpan="5" className="dashboard-table-value" style={{ textAlign: "center" }}>Loading...</td>
                                 </tr>
-                            ) : stocks.length === 0 ? (
+                            ) : sortedStocks.length === 0 ? (
                                 <tr>
                                     <td colSpan="5" className="dashboard-table-value" style={{ textAlign: "center" }}>No data available</td>
                                 </tr>
                             ) : (
-                                stocks.map((row, idx) => (
+                                sortedStocks.map((row, idx) => (
                                     <tr key={idx}>
                                         <td>{row.StockCode ?? ""}</td>
                                         <td>{row.ProductDescription ?? ""}</td>
