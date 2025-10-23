@@ -50,7 +50,7 @@ function hashPassword(password) {
 }
 
 const DatabaseOptionsModal = ({ onChange }) => {
-  // Prefill from .env
+  // Prefill from .env; we'll also try to fetch available DBs from backend
   const env = {
     DB_DATABASE: 'SysproEdu1',
     DB_USERNAME: 'jantest',
@@ -59,11 +59,56 @@ const DatabaseOptionsModal = ({ onChange }) => {
   const [database, setDatabase] = useState(env.DB_DATABASE);
   const [login, setLogin] = useState(env.DB_USERNAME);
   const [password, setPassword] = useState(env.DB_PASSWORD);
+  const [databases, setDatabases] = useState([]);
+  const [loadingDbs, setLoadingDbs] = useState(false);
+  const [dbError, setDbError] = useState(null);
+
+  // Fetch available databases and current configured DB
+  React.useEffect(() => {
+    let mounted = true;
+    setLoadingDbs(true);
+    // fetch list
+    fetch('/api/env/databases')
+      .then((res) => res.json())
+      .then((data) => {
+        if (!mounted) return;
+        if (data && Array.isArray(data.databases)) {
+          setDatabases(data.databases);
+          // If current database is in list, select it; otherwise keep env default
+          const current = data.databases.includes(database) ? database : data.databases[0] || database;
+          setDatabase(current);
+        } else {
+          setDbError('No databases returned');
+        }
+      })
+      .catch((err) => {
+        console.error('Error fetching databases', err);
+        if (!mounted) return;
+        setDbError(err.message || 'Error fetching databases');
+      })
+      .finally(() => {
+        if (mounted) setLoadingDbs(false);
+      });
+
+    // Also try to fetch configured DB name to prefer selecting it
+    fetch('/api/env/db-name')
+      .then((res) => res.json())
+      .then((d) => {
+        if (!mounted) return;
+        if (d && d.db) setDatabase(d.db);
+      })
+      .catch(() => {});
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Only change the database connection on submit. Do NOT change login/password here.
     if (onChange) {
-      onChange({ database, login, password });
+      onChange({ database });
     }
   };
 
@@ -90,7 +135,23 @@ const DatabaseOptionsModal = ({ onChange }) => {
       <h2 style={{ fontSize: '1.5rem', fontWeight: 400, marginBottom: '1.5rem', marginTop: '1rem', textAlign: 'center' }}>Database Options</h2>
       <form style={{ width: '100%' }} onSubmit={handleSubmit}>
         <div style={labelStyle}>Database</div>
-        <input style={inputStyle} type="text" value={database} onChange={e => setDatabase(e.target.value)} />
+        {loadingDbs ? (
+          <div style={{ ...inputStyle, textAlign: 'center' }}>Loading databases...</div>
+        ) : dbError ? (
+          <div style={{ color: 'red', marginBottom: '0.6rem', textAlign: 'center' }}>{dbError}</div>
+        ) : databases && databases.length ? (
+          <select
+            style={{ ...inputStyle, height: '2.4rem' }}
+            value={database}
+            onChange={e => setDatabase(e.target.value)}
+          >
+            {databases.map((db) => (
+              <option key={db} value={db}>{db}</option>
+            ))}
+          </select>
+        ) : (
+          <input style={inputStyle} type="text" value={database} onChange={e => setDatabase(e.target.value)} />
+        )}
         <div style={labelStyle}>Login</div>
         <input style={inputStyle} type="text" value={login} onChange={e => setLogin(e.target.value)} />
         <div style={labelStyle}>Password</div>
