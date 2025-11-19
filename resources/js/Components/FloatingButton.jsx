@@ -52,7 +52,7 @@ const DatabaseOptionsModal = ({ onChange }) => {
   // Prefill from .env
   const env = {
     DB_DATABASE: 'SysproEdu1',
-    DB_USERNAME: 'jantest',
+    DB_USERNAME: 'Impact_Services',
     DB_PASSWORD: 'pass',
   };
   const [database, setDatabase] = React.useState(env.DB_DATABASE);
@@ -403,7 +403,6 @@ const FloatingButton = () => {
       {/* Database button (slides out) */}
         {showDatabase && (
           <>
-            {/* Floating button stack for equal spacing */}
             <div
               style={{
                 position: 'fixed',
@@ -436,7 +435,7 @@ const FloatingButton = () => {
                 {dashboardIcon}
               </div>
               {/* Database button */}
-              <div
+              {/* <div
                 style={{
                   background: '#fff',
                   borderRadius: '50%',
@@ -453,14 +452,14 @@ const FloatingButton = () => {
                 onClick={() => setShowModal(true)}
               >
                 {databaseIcon}
-              </div>
+              </div> */}
             </div>
           </>
         )}
       {/* Database Options Modal (merged) */}
-      {showModal && (
+      {/* {showModal && (
         <DatabaseOptionsModal onChange={() => setShowModal(false)} />
-      )}
+      )} */}
       {/* Dashboards Modal */}
       {showDashModal && (
         <DashboardsModal onClose={() => setShowDashModal(false)} />

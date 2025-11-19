@@ -75,13 +75,13 @@ SQL;
     $totalQty = 0;
     $uniqueStockCodes = [];
     $slowMovingValue = 0;
-    $slowThreshold = now()->subMonths(12); // 12 months ago
+    $slowThreshold = now()->subMonths(12); 
 
     foreach ($data as $row) {
         $totalValue += (float)($row->TotalValue ?? 0);
         $totalQty += (float)($row->QtyOnHand ?? 0);
         if (!empty($row->StockCode)) $uniqueStockCodes[$row->StockCode] = true;
-        // Slow-moving: no movement in 12+ months
+       
         if (empty($row->LastMovementDate) || (strtotime($row->LastMovementDate) < $slowThreshold->getTimestamp())) {
             $slowMovingValue += (float)($row->TotalValue ?? 0);
         }
@@ -252,16 +252,14 @@ Route::get('/env/db-name', function () {
 // Return list of databases available on the current DB server
 Route::get('/env/databases', function () {
     try {
-        // This uses the current DB connection and runs a provider-specific query.
-        // For MySQL/MariaDB use SHOW DATABASES; for other drivers this may need to change.
+
         $driver = config('database.connections.' . config('database.default') . '.driver');
         if ($driver === 'mysql' || $driver === 'mysqli') {
             $rows = DB::select('SHOW DATABASES');
-            // rows are objects with Database property
+           
             $names = array_map(function ($r) {
-                // some PDO drivers return associative arrays
+                
                 if (is_object($r)) {
-                    // common key is 'Database'
                     $props = get_object_vars($r);
                     return reset($props);
                 }
@@ -273,7 +271,7 @@ Route::get('/env/databases', function () {
             return response()->json(['databases' => $names]);
         }
 
-        // Fallback: return configured database only
+     
         $connection = config('database.default');
         $dbName = config("database.connections.$connection.database") ?? env('DB_DATABASE');
         return response()->json(['databases' => [$dbName]]);
@@ -282,7 +280,7 @@ Route::get('/env/databases', function () {
     }
 });
 
-// Switch the active database for the current runtime (in-memory) connection
+
 Route::post('/env/db-switch', function (Request $request) {
     $database = $request->input('database');
     if (empty($database)) {
@@ -293,15 +291,11 @@ Route::post('/env/db-switch', function (Request $request) {
     $configKey = "database.connections.$connection.database";
 
     try {
-        // Set runtime config value
         config([$configKey => $database]);
 
-        // Purge and reconnect so the DB facade uses the new database
         DB::purge($connection);
         DB::reconnect($connection);
 
-    // Run a lightweight test query to confirm the new connection works
-    // Use a plain string query so PDO receives a string (avoid passing a Query\Expression)
     $test = DB::connection($connection)->select('SELECT 1 as ok');
 
         return response()->json(['ok' => true, 'database' => $database, 'test' => $test]);

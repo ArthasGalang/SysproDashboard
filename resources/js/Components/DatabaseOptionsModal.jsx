@@ -43,17 +43,15 @@ const buttonStyle = {
   fontWeight: 500,
 };
 
-// Helper to hash password for display
 function hashPassword(password) {
   if (!password) return '';
   return CryptoJS.SHA256(password).toString(CryptoJS.enc.Hex);
 }
 
 const DatabaseOptionsModal = ({ onChange }) => {
-  // Prefill from .env; we'll also try to fetch available DBs from backend
   const env = {
     DB_DATABASE: 'SysproEdu1',
-    DB_USERNAME: 'jantest',
+    DB_USERNAME: 'Impact_Services',
     DB_PASSWORD: 'pass',
   };
   const [database, setDatabase] = useState(env.DB_DATABASE);
@@ -62,19 +60,15 @@ const DatabaseOptionsModal = ({ onChange }) => {
   const [databases, setDatabases] = useState([]);
   const [loadingDbs, setLoadingDbs] = useState(false);
   const [dbError, setDbError] = useState(null);
-
-  // Fetch available databases and current configured DB
   React.useEffect(() => {
     let mounted = true;
     setLoadingDbs(true);
-    // fetch list
     fetch('/api/env/databases')
       .then((res) => res.json())
       .then((data) => {
         if (!mounted) return;
         if (data && Array.isArray(data.databases)) {
           setDatabases(data.databases);
-          // If current database is in list, select it; otherwise keep env default
           const current = data.databases.includes(database) ? database : data.databases[0] || database;
           setDatabase(current);
         } else {
@@ -90,7 +84,6 @@ const DatabaseOptionsModal = ({ onChange }) => {
         if (mounted) setLoadingDbs(false);
       });
 
-    // Also try to fetch configured DB name to prefer selecting it
     fetch('/api/env/db-name')
       .then((res) => res.json())
       .then((d) => {
@@ -106,7 +99,6 @@ const DatabaseOptionsModal = ({ onChange }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Only change the database connection on submit. Do NOT change login/password here.
     if (onChange) {
       onChange({ database });
     }
