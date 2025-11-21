@@ -101,6 +101,8 @@ SQL;
 Route::get('/purchase', function() {
     $suppliers = request()->query('suppliers');
     $buyers = request()->query('buyers');
+    $dateFrom = request()->query('dateFrom');
+    $dateTo = request()->query('dateTo');
 
     $whereClauses = [];
     $bindings = [];
@@ -121,6 +123,16 @@ Route::get('/purchase', function() {
             $whereClauses[] = "a.Buyer IN ($placeholders)";
             $bindings = array_merge($bindings, $list);
         }
+    }
+
+    // Date range filters (filter by OrderEntryDate date portion)
+    if (!empty($dateFrom)) {
+        $whereClauses[] = "CAST(a.OrderEntryDate AS DATE) >= ?";
+        $bindings[] = $dateFrom;
+    }
+    if (!empty($dateTo)) {
+        $whereClauses[] = "CAST(a.OrderEntryDate AS DATE) <= ?";
+        $bindings[] = $dateTo;
     }
 
     $whereSql = '';
@@ -195,17 +207,26 @@ SQL;
 
 // Spend by supplier (YTD fixed year for now)
 Route::get('/purchase/spend-by-supplier', function() {
-    // Fixed year - change as needed or make dynamic via query param
-    $year = request()->query('year', '2021');
+    $year = request()->query('year', null);
     $suppliers = request()->query('suppliers');
     $buyers = request()->query('buyers');
+    $dateFrom = request()->query('dateFrom');
+    $dateTo = request()->query('dateTo');
 
     $whereClauses = [];
     $bindings = [];
 
-    // year filter first
-    if ($year) {
-        $whereClauses[] = "YEAR(OrderEntryDate) = ?";
+    // If a date range is provided, use it. Otherwise, fall back to year if provided.
+    if (!empty($dateFrom)) {
+        $whereClauses[] = "CAST(a.OrderEntryDate AS DATE) >= ?";
+        $bindings[] = $dateFrom;
+    }
+    if (!empty($dateTo)) {
+        $whereClauses[] = "CAST(a.OrderEntryDate AS DATE) <= ?";
+        $bindings[] = $dateTo;
+    }
+    if (empty($dateFrom) && empty($dateTo) && !empty($year)) {
+        $whereClauses[] = "YEAR(a.OrderEntryDate) = ?";
         $bindings[] = $year;
     }
 
@@ -213,7 +234,7 @@ Route::get('/purchase/spend-by-supplier', function() {
         $list = array_filter(array_map('trim', explode(',', $suppliers)));
         if (count($list)) {
             $placeholders = implode(',', array_fill(0, count($list), '?'));
-            $whereClauses[] = "SupplierName IN ($placeholders)";
+            $whereClauses[] = "a.Supplier IN ($placeholders)";
             $bindings = array_merge($bindings, $list);
         }
     }
@@ -222,21 +243,76 @@ Route::get('/purchase/spend-by-supplier', function() {
         $list = array_filter(array_map('trim', explode(',', $buyers)));
         if (count($list)) {
             $placeholders = implode(',', array_fill(0, count($list), '?'));
-            $whereClauses[] = "Buyer IN ($placeholders)";
+            $whereClauses[] = "a.Buyer IN ($placeholders)";
             $bindings = array_merge($bindings, $list);
         }
     }
 
+    // Build WHERE SQL
     $whereSql = '';
     if (count($whereClauses)) {
-        $whereSql = ' WHERE ' . implode(' AND ', $whereClauses);
+        $whereSql = 'WHERE ' . implode(' AND ', $whereClauses);
     }
-    $sql = "SELECT Supplier, SupplierName, SUM(CAST(POValue AS DECIMAL(18,2))) AS POValue
-            FROM vw_PurchasingDB" . $whereSql . " GROUP BY Supplier, SupplierName";
+
+    // Replace the view with your full query
+    $sql = <<<SQL
+WITH DetailJoin AS (
+    SELECT 
+        d.PurchaseOrder,
+        d.MStockCode,
+        d.MOrderQty,
+        d.MPrice,
+        CAST(d.MLatestDueDate AS DATE) AS MLatestDueDate,
+        CAST(d.MLastReceiptDat AS DATE) AS MLastReceiptDat,
+        ISNULL(SUM(f.CurGrnValue), 0) AS TotalCurGrnValue,
+        ISNULL(SUM(f.OrigPurchValue), 0) AS TotalOrigPurchaseValue
+    FROM PorMasterDetail d
+    LEFT JOIN GrnDetails f
+        ON d.PurchaseOrder = f.PurchaseOrder
+        AND d.MStockCode = f.StockCode
+    GROUP BY 
+        d.PurchaseOrder,
+        d.MStockCode,
+        d.MOrderQty,
+        d.MPrice,
+        d.MLatestDueDate,
+        d.MLastReceiptDat
+),
+PurchaseData AS (
+    SELECT 
+        a.Supplier,
+        b.SupplierName,
+        a.Buyer,
+        e.Name AS BuyerName,
+        SUM(dj.MPrice * dj.MOrderQty) AS POValue
+    FROM PorMasterHdr a
+    JOIN ApSupplier b 
+        ON a.Supplier = b.Supplier
+    JOIN InvBuyer e
+        ON a.Buyer = e.Buyer
+    JOIN DetailJoin dj
+        ON a.PurchaseOrder = dj.PurchaseOrder
+    $whereSql
+    GROUP BY 
+        a.Supplier,
+        b.SupplierName,
+        a.Buyer,
+        e.Name
+)
+SELECT 
+    Supplier,
+    SupplierName,
+    SUM(POValue) AS POValue
+FROM PurchaseData
+GROUP BY Supplier, SupplierName
+ORDER BY Supplier
+SQL;
 
     $data = DB::select($sql, $bindings);
+
     return response()->json($data);
 });
+
 
 
 

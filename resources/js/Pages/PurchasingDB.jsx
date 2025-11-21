@@ -23,6 +23,7 @@ const InvenValDB = () => {
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [showFilters, setShowFilters] = useState(false);
+    const [sortConfig, setSortConfig] = useState({ key: 'POValue', direction: 'desc' });
 
     useEffect(() => {
         const params = new URLSearchParams();
@@ -76,40 +77,61 @@ const InvenValDB = () => {
                     ppvColor = 'default';
                 }
 
-                const now = new Date();
-                const currentMonth = now.getMonth();
-                const currentYear = now.getFullYear();
+                // POs placed count: if a date range is applied, count POs inside that range,
+                // otherwise default to Month-To-Date (current month/year)
+                const parseDate = (d) => {
+                    if (!d) return null;
+                    const dt = new Date(d);
+                    return isNaN(dt.getTime()) ? null : dt;
+                };
 
-                const mtdCount = data.filter(po => {
-                    if (!po.OrderEntryDate) return false;
-                    const orderDate = new Date(po.OrderEntryDate);
-                    return (
-                        orderDate.getMonth() === currentMonth &&
-                        orderDate.getFullYear() === currentYear
-                    );
-                }).length;
+                let mtdCount = 0;
+                if (appliedDateFrom || appliedDateTo) {
+                    const from = appliedDateFrom ? parseDate(appliedDateFrom) : null;
+                    const to = appliedDateTo ? parseDate(appliedDateTo) : null;
+                    mtdCount = data.filter(po => {
+                        if (!po.OrderEntryDate) return false;
+                        const od = parseDate(po.OrderEntryDate);
+                        if (!od) return false;
+                        if (from && od < from) return false;
+                        if (to && od > to) return false;
+                        return true;
+                    }).length;
+                } else {
+                    // no date filter applied -> count all purchases returned by the API
+                    mtdCount = data.length;
+                }
 
                 setStats([
                     { label: 'Open Purchase Orders Value', value: `$${openPOValue.toLocaleString()}`, color: 'default' },
                     { label: 'Supplier On-Time Delivery', value: `${onTimePercentage.toFixed(2)}%`, color: 'default' },
                     { label: 'Purchase Price Variance (PPV)', value: ppvDisplay, color: ppvColor },
-                    { label: 'POs Placed (MTD)', value: mtdCount, color: 'blue' },
+                    { label: 'POs Placed', value: mtdCount, color: 'blue' },
                 ]);
             })
             .catch((error) => {
                 console.error("Error fetching data:", error);
                 setLoading(false);
             });
-    }, [appliedSuppliers, appliedBuyers]);
+    }, [appliedSuppliers, appliedBuyers, appliedDateFrom, appliedDateTo]);
 
     useEffect(() => {
         fetch("http://127.0.0.1:8000/api/purchase")
             .then((res) => res.json())
             .then((data) => {
-                const uniqueSuppliers = Array.from(new Set(data.map(d => d.SupplierName).filter(Boolean)));
-                const uniqueBuyers = Array.from(new Set(data.map(d => d.Buyer).filter(Boolean)));
-                setSuppliers(uniqueSuppliers);
-                setBuyers(uniqueBuyers);
+                // Build supplier options as { value: Supplier (code), label: SupplierName }
+                const supplierMap = {};
+                const buyerMap = {};
+                data.forEach(d => {
+                    if (d.Supplier) supplierMap[d.Supplier] = d.SupplierName || d.Supplier;
+                    if (d.Buyer) buyerMap[d.Buyer] = d.BuyerName || d.Buyer;
+                });
+
+                const supplierOptions = Object.keys(supplierMap).map(k => ({ value: k, label: supplierMap[k] }));
+                const buyerOptions = Object.keys(buyerMap).map(k => ({ value: k, label: buyerMap[k] }));
+
+                setSuppliers(supplierOptions);
+                setBuyers(buyerOptions);
             })
             .catch(() => {
             });
@@ -152,6 +174,53 @@ const InvenValDB = () => {
             </div>
         );
     };
+
+    const sortableColumns = {
+        SupplierName: true,
+        OrderEntryDate: true,
+        BuyerName: true,
+        POValue: true,
+    };
+
+    const handleSort = (key) => {
+        if (!sortableColumns[key]) return;
+        setSortConfig((prev) => {
+            if (prev.key === key) {
+                return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+            }
+            return { key, direction: 'desc' };
+        });
+    };
+
+    const sortedPurchases = React.useMemo(() => {
+        if (!purchases || purchases.length === 0) return [];
+        const key = sortConfig.key;
+        const dir = sortConfig.direction === 'asc' ? 1 : -1;
+
+        const sorted = [...purchases].sort((a, b) => {
+            const va = a[key];
+            const vb = b[key];
+            // Numeric sort for POValue
+            if (key === 'POValue') {
+                const na = Number(va) || 0;
+                const nb = Number(vb) || 0;
+                return (na - nb) * dir;
+            }
+            // Date sort for OrderEntryDate
+            if (key === 'OrderEntryDate') {
+                const da = va ? new Date(va) : new Date(0);
+                const db = vb ? new Date(vb) : new Date(0);
+                return (da - db) * dir;
+            }
+            // String fallback
+            const sa = (va || '').toString().toLowerCase();
+            const sb = (vb || '').toString().toLowerCase();
+            if (sa < sb) return -1 * dir;
+            if (sa > sb) return 1 * dir;
+            return 0;
+        });
+        return sorted;
+    }, [purchases, sortConfig]);
 
     return (
         <div className="dashboard-root">
@@ -213,7 +282,7 @@ const InvenValDB = () => {
                             <label className="filter-label">Supplier</label>
                             <PortalSelect
                                 isMulti
-                                options={suppliers.map(s => ({ value: s, label: s }))}
+                                options={suppliers}
                                 value={selectedSuppliers}
                                 onChange={setSelectedSuppliers}
                                 placeholder="Select suppliers"
@@ -226,7 +295,7 @@ const InvenValDB = () => {
                             <label className="filter-label">Buyer</label>
                             <PortalSelect
                                 isMulti
-                                options={buyers.map(b => ({ value: b, label: b }))}
+                                options={buyers}
                                 value={selectedBuyers}
                                 onChange={setSelectedBuyers}
                                 placeholder="Select buyers"
@@ -281,7 +350,7 @@ const InvenValDB = () => {
                         { label: 'Open Purchase Orders Value', highlight: false },
                         { label: 'Supplier On-Time Delivery', highlight: false },
                         { label: 'Purchase Price Variance (PPV)', color: null },
-                        { label: 'POs Placed (MTD)', color: 'blue' },
+                        { label: 'POs Placed', color: 'blue' },
                     ].map((card, idx) => {
                         const stat = stats.find(s => s.label === card.label);
                         let valueElem;
@@ -310,30 +379,64 @@ const InvenValDB = () => {
 
                 <div className="dashboard-row">
                     <div className="dashboard-panel">
-                        <div className="dashboard-panel-title">Spend By Supplier (YTD)</div>
+                        <div className="dashboard-panel-title">Spend By Supplier</div>
                         <div className="dashboard-bar-chart">
-                            <SpendBySupplier suppliers={appliedSuppliers} buyers={appliedBuyers} />
+                            <SpendBySupplier
+                                suppliers={appliedSuppliers}
+                                buyers={appliedBuyers}
+                                dateFrom={appliedDateFrom}
+                                dateTo={appliedDateTo}
+                            />
                         </div>
                     </div>
 
                     <div className="dashboard-panel">
                         <div className="dashboard-panel-title">On-Time vs. Late Deliveries</div>
                         <div className="dashboard-doughnut-chart">
-                            <OnTimeLateDelivery suppliers={appliedSuppliers} buyers={appliedBuyers} />
+                            <OnTimeLateDelivery
+                                suppliers={appliedSuppliers}
+                                buyers={appliedBuyers}
+                                dateFrom={appliedDateFrom}
+                                dateTo={appliedDateTo}
+                            />
                         </div>
                     </div>
                 </div>
 
                 <div className="dashboard-table-panel">
-                    <div className="dashboard-panel-title">Top 10 Open Purchase Orders By Value</div>
+                    <div className="dashboard-panel-title">Top 10 Open Purchase Orders</div>
                     <table className="dashboard-table">
                         <thead>
                             <tr>
                                 <th>PO NUMBER</th>
-                                <th>SUPPLIER NAME</th>
-                                <th>ORDER DATE</th>
-                                <th>BUYER</th>
-                                <th>PO VALUE</th>
+                                <th
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => handleSort('SupplierName')}
+                                >
+                                    SUPPLIER NAME
+                                    {sortConfig.key === 'SupplierName' && (sortConfig.direction === 'asc' ? ' ▲' : ' ▼')}
+                                </th>
+                                <th
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => handleSort('OrderEntryDate')}
+                                >
+                                    ORDER DATE
+                                    {sortConfig.key === 'OrderEntryDate' && (sortConfig.direction === 'asc' ? ' ▲' : ' ▼')}
+                                </th>
+                                <th
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => handleSort('BuyerName')}
+                                >
+                                    BUYER
+                                    {sortConfig.key === 'BuyerName' && (sortConfig.direction === 'asc' ? ' ▲' : ' ▼')}
+                                </th>
+                                <th
+                                    style={{ cursor: 'pointer' }}
+                                    onClick={() => handleSort('POValue')}
+                                >
+                                    PO VALUE
+                                    {sortConfig.key === 'POValue' && (sortConfig.direction === 'asc' ? ' ▲' : ' ▼')}
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -346,12 +449,7 @@ const InvenValDB = () => {
                                     <td colSpan="5" className="dashboard-table-value" style={{ textAlign: "center" }}>No data available</td>
                                 </tr>
                             ) : (
-                                purchases
-                                    .sort((a, b) => {
-                                        const numA = parseFloat(a.POValue) || 0;
-                                        const numB = parseFloat(b.POValue) || 0;
-                                        return numB - numA;
-                                    })
+                                sortedPurchases
                                     .slice(0, 10)
                                     .map((row, idx) => (
                                         <tr key={idx}>
