@@ -5,7 +5,7 @@ import "@css/dashboard.css";
 
 const COLORS = ["#75c579ff", "#ee6866ff"];
 
-const OnTimeLateDelivery = ({ suppliers = [], buyers = [] }) => {
+const OnTimeLateDelivery = ({ suppliers = [], buyers = [], dateFrom = null, dateTo = null }) => {
   const [chartData, setChartData] = useState({
     labels: ["On-Time", "Late"],
     datasets: [
@@ -20,6 +20,8 @@ const OnTimeLateDelivery = ({ suppliers = [], buyers = [] }) => {
     const params = new URLSearchParams();
     if (suppliers && suppliers.length) params.set('suppliers', suppliers.join(','));
     if (buyers && buyers.length) params.set('buyers', buyers.join(','));
+    if (dateFrom) params.set('dateFrom', dateFrom);
+    if (dateTo) params.set('dateTo', dateTo);
 
     const url = "http://127.0.0.1:8000/api/purchase" + (params.toString() ? `?${params.toString()}` : '');
 
@@ -53,24 +55,14 @@ const OnTimeLateDelivery = ({ suppliers = [], buyers = [] }) => {
         });
       })
       .catch((err) => console.error("Error fetching delivery data:", err));
-  }, [suppliers, buyers]);
+  }, [suppliers, buyers, dateFrom, dateTo]);
 
   return (
-    <div
-      style={{
-        width: '100%',
-        minWidth: window.innerWidth > 900 ? 550 : 400,
-        minHeight: window.innerWidth > 900 ? 550 : 400,
-        maxWidth: window.innerWidth > 900 ? 500 : 700,
-        margin: '0 auto',
-        boxSizing: 'border-box',
-        padding: window.innerWidth > 900 ? '2rem' : '1rem',
-        transition: 'all 0.3s',
-      }}
-    >
+    <div className="chart-container">
       <Doughnut
         data={chartData}
         options={{
+          responsive: true,
           maintainAspectRatio: false,
           plugins: {
             legend: {

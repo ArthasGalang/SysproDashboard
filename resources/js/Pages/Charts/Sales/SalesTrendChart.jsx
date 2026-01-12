@@ -54,7 +54,11 @@ const SalesTrendChart = () => {
     },
   };
 
-  return <Line data={data} options={options} />;
+  return (
+    <div className="chart-container">
+      <Line data={data} options={options} />
+    </div>
+  );
 };
 
 export default SalesTrendChart;

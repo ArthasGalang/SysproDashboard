@@ -49,7 +49,7 @@ const SalesBySalesperson = () => {
 
   return (
     <div className="dashboard-panel-sidegraph">
-      <div style={{ height: '350px' }}>
+      <div className="chart-container" style={{ minHeight: '300px' }}>
         <Bar data={data} options={options} />
       </div>
     </div>

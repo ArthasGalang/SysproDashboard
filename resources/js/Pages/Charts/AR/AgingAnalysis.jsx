@@ -21,23 +21,26 @@ const AgingAnalysis = () => {
     }, []);
 
     return (
-                <Bar
-                    data={{
-                        labels: warehouseData.map(d => d.name),
-                        datasets: [{
-                            data: warehouseData.map(d => d.value),
-                            backgroundColor: COLORS[3],
-                        }]
-                    }}
-                    options={{
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false,
-                            },
+        <div className="chart-container">
+            <Bar
+                data={{
+                    labels: warehouseData.map(d => d.name),
+                    datasets: [{
+                        data: warehouseData.map(d => d.value),
+                        backgroundColor: COLORS[3],
+                    }]
+                }}
+                options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false,
                         },
-                    }}
-                />
+                    },
+                }}
+            />
+        </div>
     );
 };
 

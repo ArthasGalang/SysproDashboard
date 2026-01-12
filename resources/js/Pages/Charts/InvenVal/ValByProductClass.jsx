@@ -33,18 +33,7 @@ const ValByProductClass = ({ warehouses = [], productClasses = [] }) => {
   }, [warehouses, productClasses]);
 
   return (
-    <div
-      style={{
-        width: '100%',
-  minWidth: window.innerWidth > 900 ? 550 : 400,
-  minHeight: window.innerWidth > 900 ? 550 : 400,
-  maxWidth: window.innerWidth > 900 ? 500 : 700,
-        margin: '0 auto',
-        boxSizing: 'border-box',
-        padding: window.innerWidth > 900 ? '2rem' : '1rem',
-        transition: 'all 0.3s',
-      }}
-    >
+    <div className="chart-container">
       <Doughnut
         data={{
           labels: classData.map((d) => d.name),
@@ -57,6 +46,7 @@ const ValByProductClass = ({ warehouses = [], productClasses = [] }) => {
           ],
         }}
         options={{
+          responsive: true,
           maintainAspectRatio: false,
           plugins: {
             legend: {

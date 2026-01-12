@@ -23,26 +23,29 @@ const CurrentOverdue = () => {
   }, []);
 
   return (
-        <Doughnut
-          data={{
-            labels: classData.map((d) => d.name),
-            datasets: [
-              {
-                label: "Total Value",
-                data: classData.map((d) => d.value),
-                backgroundColor: COLORS,
-              },
-            ],
-          }}
-          options={{
-            maintainAspectRatio: false,
-            plugins: {
-              legend: {
-                position: "top",
-              },
+    <div className="chart-container">
+      <Doughnut
+        data={{
+          labels: classData.map((d) => d.name),
+          datasets: [
+            {
+              label: "Total Value",
+              data: classData.map((d) => d.value),
+              backgroundColor: COLORS,
             },
-          }}
-        />
+          ],
+        }}
+        options={{
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "top",
+            },
+          },
+        }}
+      />
+    </div>
   );
 };
 
