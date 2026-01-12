@@ -70,7 +70,7 @@ $whereSql
 SQL;
     $data = DB::select($sql, $bindings);
 
-    // Calculate summary stats for dashboard
+    
     $totalValue = 0;
     $totalQty = 0;
     $uniqueStockCodes = [];
@@ -125,7 +125,6 @@ Route::get('/purchase', function() {
         }
     }
 
-    // Date range filters (filter by OrderEntryDate date portion)
     if (!empty($dateFrom)) {
         $whereClauses[] = "CAST(a.OrderEntryDate AS DATE) >= ?";
         $bindings[] = $dateFrom;
@@ -207,7 +206,6 @@ SQL;
 
 
 Route::get('/purchase/spend-by-supplier', function() {
-    // Fixed year - change as needed or make dynamic via query param
     $year = request()->query('year', '2021');
     $suppliers = request()->query('suppliers');
     $buyers = request()->query('buyers');
@@ -241,13 +239,11 @@ Route::get('/purchase/spend-by-supplier', function() {
         }
     }
 
-    // Build WHERE SQL
     $whereSql = '';
     if (count($whereClauses)) {
         $whereSql = 'WHERE ' . implode(' AND ', $whereClauses);
     }
 
-    // Replace the view with your full query
     $sql = <<<SQL
 WITH DetailJoin AS (
     SELECT 

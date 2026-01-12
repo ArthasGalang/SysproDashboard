@@ -59,7 +59,7 @@ const InvenValDB = () => {
                 const totalValid = validDeliveries.length;
                 const onTimePercentage = totalValid > 0 ? (onTimeCount / totalValid) * 100 : 0;
 
-                // PPV Calculation
+                
                 const totalCurGrnValue = data.reduce((sum, po) => sum + (Number(po.TotalCurGrnValue) || 0), 0);
                 const totalOrigPurchaseValue = data.reduce((sum, po) => sum + (Number(po.TotalOrigPurchaseValue) || 0), 0);
                 const ppv = totalOrigPurchaseValue - totalCurGrnValue;
@@ -76,9 +76,8 @@ const InvenValDB = () => {
                     ppvDisplay = `$0.00`;
                     ppvColor = 'default';
                 }
+                
 
-                // POs placed count: if a date range is applied, count POs inside that range,
-                // otherwise default to Month-To-Date (current month/year)
                 const parseDate = (d) => {
                     if (!d) return null;
                     const dt = new Date(d);
@@ -119,7 +118,7 @@ const InvenValDB = () => {
         fetch("http://127.0.0.1:8000/api/purchase")
             .then((res) => res.json())
             .then((data) => {
-                // Build supplier options as { value: Supplier (code), label: SupplierName }
+                
                 const supplierMap = {};
                 const buyerMap = {};
                 data.forEach(d => {
