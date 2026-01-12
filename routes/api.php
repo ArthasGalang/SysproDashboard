@@ -193,9 +193,8 @@ SQL;
     return response()->json($data);
 });
 
-// Spend by supplier (YTD fixed year for now)
+
 Route::get('/purchase/spend-by-supplier', function() {
-    // Fixed year - change as needed or make dynamic via query param
     $year = request()->query('year', '2021');
     $suppliers = request()->query('suppliers');
     $buyers = request()->query('buyers');
@@ -203,7 +202,7 @@ Route::get('/purchase/spend-by-supplier', function() {
     $whereClauses = [];
     $bindings = [];
 
-    // year filter first
+    
     if ($year) {
         $whereClauses[] = "YEAR(OrderEntryDate) = ?";
         $bindings[] = $year;
@@ -249,7 +248,7 @@ Route::get('/env/db-name', function () {
     return response()->json(['db' => $dbName, 'connection' => $connection]);
 });
 
-// Return list of databases available on the current DB server
+
 Route::get('/env/databases', function () {
     try {
 

@@ -9,18 +9,6 @@ use Illuminate\Support\Facades\DB;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
 Route::get('/', function () {
     return Inertia::render('InvenValDB');
 })->name('InvenValDB');
